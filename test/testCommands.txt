@@ -1,33 +1,29 @@
 select (a, b, c) from (table)
+
 update (table) set (name = fred, address = NewYork) where (name == fred & address == kanata, ontario)
+
 delete (table) where (name == fred & address = kanata, ontario)
+
 where ((name == fred | name == mike) & address == 150 Ur Moms House)
+
 drop (table)
+
+where ((name == fred | name == mike) & address == 150 Ur Moms House)
+
+where ((name == fred | name == mike) & address == 150 Ur Moms House | (country == canada | country == america))
+
+where ((name == fred | name == mike) & address == 150 Ur Moms House | ((name == fred & age == 12) | (name == mike | country != canada))) 
+
 insert (table) (john, downtown, accountant)
+
 create (employees) (name:s_20, address:s_20, salary:int, department:s_35) primary_key(name, address, department) foreign_key (department:department_table)
 
+where ((name == fred | name == mike) & address == 150 Ur Moms House | ((name == fred & age == 12) | (name == mike | country != canada)) 
 
-void Parser::parse_where(std::string_view& sv) {
-	size_t conj_pos = sv.size();
-	
-	while (!sv.empty()) {
-		for (auto [key, value] : conj_map)
-			if (auto key_pos = sv.find(key);
-				key_pos != std::string_view::npos)
-				conj_pos = std::min(key_pos, conj_pos);
-		
-		const auto conj  = conj_map.find(sv[conj_pos]);
-		const auto parse = sv.substr(0, conj_pos);
-		
-		sv = sv.substr(std::min(conj_pos + 1, sv.size()));
+select (a, b, c) from (l : accounting & tech : salary = salary) where (name == fred & salary >= 70000)
 
-		parse_conditional(parse);
-		statement.conj[statement.num_conj++] = 
-			(conj != std::end(conj_map)) ? conj->second : Conjunctor::NullConjunctor;
-		
-		conj_pos = sv.size();
-	}
+select (address, year_of_work, age) from (r : accounting & tech : salary = salary) where (name == fred & salary >= 70000)
 
-	parse_conditional(sv);
-}
+SELECT (address, year_of_work, age) FROM (r : accounting & tech : salary = salary) WHERE (name == fred & salary >= 70000)
 
+create_index(table) (a, b, c) size(10)
