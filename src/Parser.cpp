@@ -48,7 +48,7 @@ bool Parser::is_valid_bracket(const std::string_view sv) {
 /********************************************************************************/
 
 void Parser::parse_query(const std::string& user_query) {
-  Command		   command;
+  Command          command;
   std::string_view sv_query;
 
   query = user_query;
@@ -89,7 +89,7 @@ void Parser::parse_query(const std::string& user_query) {
 
 /********************************************************************************/
 
-void Parser::parse_bracket(const Command	command,
+void Parser::parse_bracket(const Command    command,
                            std::string_view br_content, 
                            std::string_view extra_content) 
 {
@@ -270,7 +270,7 @@ void Parser::parse_where(const std::string_view sv,
 /********************************************************************************/
 
 void Parser::parse_conditional(const std::string_view sv, 
-                               const size_t			  layer) 
+                               const size_t           layer) 
 {
   Comparator comp;
   size_t	 comp_pos;
