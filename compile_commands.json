@@ -1,19 +1,19 @@
 [
 {
   "directory": "/home/SuMo/Documents/Projects/bad_DB/build",
-  "command": "/usr/bin/c++  -I/home/SuMo/Documents/Projects/bad_DB/include -g -std=gnu++20 -o CMakeFiles/badDB.dir/src/Parser.cpp.o -c /home/SuMo/Documents/Projects/bad_DB/src/Parser.cpp",
+  "command": "/usr/bin/c++  -I/home/SuMo/Documents/Projects/bad_DB/include -g -std=c++20 -o CMakeFiles/badDB.dir/src/Parser.cpp.o -c /home/SuMo/Documents/Projects/bad_DB/src/Parser.cpp",
   "file": "/home/SuMo/Documents/Projects/bad_DB/src/Parser.cpp",
   "output": "CMakeFiles/badDB.dir/src/Parser.cpp.o"
 },
 {
   "directory": "/home/SuMo/Documents/Projects/bad_DB/build",
-  "command": "/usr/bin/c++  -I/home/SuMo/Documents/Projects/bad_DB/include -g -std=gnu++20 -o CMakeFiles/badDB.dir/src/Util.cpp.o -c /home/SuMo/Documents/Projects/bad_DB/src/Util.cpp",
+  "command": "/usr/bin/c++  -I/home/SuMo/Documents/Projects/bad_DB/include -g -std=c++20 -o CMakeFiles/badDB.dir/src/Util.cpp.o -c /home/SuMo/Documents/Projects/bad_DB/src/Util.cpp",
   "file": "/home/SuMo/Documents/Projects/bad_DB/src/Util.cpp",
   "output": "CMakeFiles/badDB.dir/src/Util.cpp.o"
 },
 {
   "directory": "/home/SuMo/Documents/Projects/bad_DB/build",
-  "command": "/usr/bin/c++  -I/home/SuMo/Documents/Projects/bad_DB/include -g -std=gnu++20 -o CMakeFiles/badDB.dir/src/main.cpp.o -c /home/SuMo/Documents/Projects/bad_DB/src/main.cpp",
+  "command": "/usr/bin/c++  -I/home/SuMo/Documents/Projects/bad_DB/include -g -std=c++20 -o CMakeFiles/badDB.dir/src/main.cpp.o -c /home/SuMo/Documents/Projects/bad_DB/src/main.cpp",
   "file": "/home/SuMo/Documents/Projects/bad_DB/src/main.cpp",
   "output": "CMakeFiles/badDB.dir/src/main.cpp.o"
 }

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Util.hpp"
-
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -12,6 +10,9 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <ranges>
+
+#include "Util.hpp"
 
 const std::unordered_map<std::string, Command> command_map {
 	{"create"     , Command::Create} , {"create_index", Command::CreateIndex},
@@ -23,8 +24,8 @@ const std::unordered_map<std::string, Command> command_map {
 	{"vacuum"     , Command::Vacuum} , {"where"       , Command::Where} 
 };
 
-const std::unordered_map<std::string, DataBaseType> type_map {
-	{"int", DataBaseType::Integer}, {"float", DataBaseType::Float}, 
+const std::unordered_map<std::string, Type> type_map {
+	{"int", Type::Integer}, {"float", Type::Float}, 
 };
 
 const std::unordered_map<char, TypeOfJoin> join_map {
@@ -42,33 +43,28 @@ const std::unordered_map<char, Conjunctor> conj_map {
 };
 
 struct Parser {
-	Command          get_command(std::string_view& sv);
+	Command			 get_command        (std::string_view& sv);
 	std::string_view get_bracket_content(std::string_view& sv);
 
-
-	bool is_valid_bracket(std::string_view sv);
+	bool is_valid_bracket(const std::string_view sv);
 	
-
-	void parse_query(const std::string& user_query);
-	
-	void parse_bracket(Command          command_enum,
-					   std::string_view br_content, 
-					   std::string_view extra_content = "");
-	
-	void parse_create(std::string_view sv_br, 
-					  std::string_view sv_extra);
-	
-	void parse_from(std::string_view sv);
-	
-	void parse_where(std::string_view sv, size_t layer);
-	
-	void parse_conditional(std::string_view sv, size_t layer);
-	
+	void parse_query      (const std::string& user_query);
+	void parse_bracket    (const Command    command,
+					       std::string_view br_content, 
+					       std::string_view extra_content = "");
+	void parse_create     (std::string_view sv_br, 
+					       std::string_view sv_extra);
+	void parse_from       (std::string_view sv);
+	void parse_where      (const std::string_view sv, 
+						   const size_t			  layer);
+	void parse_conditional(const std::string_view sv, 
+						   const size_t			  layer);
 
 	size_t split_string(std::string_view sv,
 						std::span<std::string_view> tokens,
-						const std::string delimiters);
+						const char delimiter);
 
 	std::string  query;
 	SQLStatement statement;
 };
+

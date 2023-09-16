@@ -1,13 +1,10 @@
 #include "Parser.hpp"
-#include "Util.hpp"
-#include <stdexcept>
-#include <string_view>
 
 Command Parser::get_command(std::string_view& sv) {
-	const size_t br_pos     = sv.find('(');
-	auto         sv_command = sv.substr(0, br_pos);
-	const auto   srch       = std::string(sv_command);
-
+	const auto br_pos     = sv.find('(');
+	const auto sv_command = sv.substr(0, br_pos);
+	const auto srch       = std::string(sv_command);
+	
 	if (!command_map.count(srch))
 		throw std::runtime_error("Invalid SQLCommand:" 
 								 "potential bracket error\n");
@@ -22,7 +19,7 @@ std::string_view Parser::get_bracket_content(std::string_view& sv) {
 
 	size_t  end     = 1;
 	int32_t balance = 1;
-	
+
 	while (balance && end < sv.size()) {
 		balance += (sv[end] == '(');
 		balance -= (sv[end] == ')');
@@ -37,12 +34,12 @@ std::string_view Parser::get_bracket_content(std::string_view& sv) {
 
 /********************************************************************************/
 
-bool Parser::is_valid_bracket(std::string_view sv) {
+bool Parser::is_valid_bracket(const std::string_view sv) {
 	int32_t balance = 0;
 
-	for (size_t i = 0; i < sv.size(); ++i) {
-		balance += (sv[i] == '(');
-		balance -= (sv[i] == ')');
+	for (const auto character : sv) {
+		balance += (character == '(');
+		balance -= (character == ')');
 	}
 
 	return (balance == 0);
@@ -51,8 +48,8 @@ bool Parser::is_valid_bracket(std::string_view sv) {
 /********************************************************************************/
 
 void Parser::parse_query(const std::string& user_query) {
-	std::string_view sv_query;
 	Command			 command;
+	std::string_view sv_query;
 	
 	query = user_query;
 	
@@ -60,8 +57,8 @@ void Parser::parse_query(const std::string& user_query) {
 		c = std::tolower(c);
 	
 	query.erase(std::remove_if(std::begin(query), std::end(query), 
-				[](unsigned char c) { return std::isspace(c); }), 
-				std::end(query));
+				[](unsigned char c) { return std::isspace(c); }),
+			    std::end(query));
 	
 	if (query == "exit") {
 		std::cout << "EXITING PROGRAM\n";
@@ -92,7 +89,7 @@ void Parser::parse_query(const std::string& user_query) {
 
 /********************************************************************************/
 
-void Parser::parse_bracket(Command		    command,
+void Parser::parse_bracket(const Command	command,
 						   std::string_view br_content, 
 						   std::string_view extra_content) 
 {
@@ -100,65 +97,75 @@ void Parser::parse_bracket(Command		    command,
 		case Command::Create:
 			parse_create(br_content, extra_content);	
 			break;
+		/*************************/
 		case Command::Primary:
 			statement.num_primary = 
-				split_string(br_content, statement.prim_key, ",");
+				split_string(br_content, statement.prim_key, ',');
 			break;
+		/*************************/
 		case Command::Foreign: {
 			statement.num_foreign = 
-				split_string(br_content, statement.foreign_attr, ",");
+				split_string(br_content, statement.foreign_attr, ',');
 			
 			for (size_t i = 0; i < statement.num_foreign; ++i) {
-				const auto   sv    = statement.foreign_attr[i];
-				const size_t colon = sv.find(':');
+				const auto sv    = statement.foreign_attr[i];
+				const auto colon = sv.find(':');
 				
 				statement.foreign_attr[i]  = sv.substr(0, colon);
 				statement.foreign_table[i] = sv.substr(colon + 1);
 			}
 			break;
 		}
+		/*************************/
 		case Command::Vacuum:
 		case Command::Delete:
 		case Command::Drop: 
 		case Command::Update:
 			statement.table_name[0] = br_content;
 			break;
+		/*************************/
 		case Command::From:
 			parse_from(br_content);
 			break;
+		/*************************/
 		case Command::CreateIndex:
 		case Command::Insert:
 			statement.table_name[0] = extra_content; 
 			statement.num_attr = 
-				split_string(br_content, statement.attr, ",");
+				split_string(br_content, statement.table_attr, ',');
 			break;
+		/*************************/
 		case Command::Select:
 			statement.num_attr = 
-				split_string(br_content, statement.attr, ",");			
+				split_string(br_content, statement.table_attr, ',');			
 			break;
+		/*************************/
 		case Command::Set: {
 			statement.num_set = 
-					split_string(br_content, statement.set_attr, ",");
+				split_string(br_content, statement.set_attr, ',');
 
 			for (size_t i = 0; i < statement.num_set; ++i) {
-				const auto   sv = statement.set_attr[i];
-				const size_t eq = sv.find('=');
+				const auto sv = statement.set_attr[i];
+				const auto eq = sv.find('=');
 				
 				statement.set_attr[i]  = sv.substr(0, eq);
 				statement.set_value[i] = sv.substr(eq + 1);
 			}
 			break;
 		}
+		/*************************/
 		case Command::Size:
 			statement.node_size = 
 				stoi(std::string(br_content));
 			break;
+		/*************************/
 		case Command::Where:
 			if (!is_valid_bracket(br_content)) 
 				throw std::runtime_error("Error parsing 'where' command:" 
 										 "Invalid bracketing\n");
 			parse_where(br_content, 0);
 			break;
+		/*************************/
 		default: throw std::runtime_error("Error: Invalid command used\n");
 	}
 }
@@ -174,38 +181,40 @@ void Parser::parse_create(std::string_view sv_br,
 								 "error in create string format");
 
 	statement.table_name[0] = sv_extra; 
-	statement.num_attr      = split_string(sv_br, statement.attr, ",");
+	statement.num_attr      = split_string(sv_br, statement.table_attr, ',');
 
 	for (size_t i = 0; i < statement.num_attr; ++i) {
-		const auto sv_attr = statement.attr[i];
+		const auto sv_attr = statement.table_attr[i];
 		const auto colon   = sv_attr.find(':');
-		const auto type    = std::string(sv_attr.substr(colon + 1));
-		statement.attr[i]  = sv_attr.substr(0, colon);
+		const auto type    = std::string(sv_attr. substr(colon + 1));
+		statement.table_attr[i] = sv_attr.substr(0, colon);
 		
 		if (!type_map.count(type)) {
-			const size_t underscore = type.find('_');
+			const auto underscore = type.find('_');
 			
 			if (underscore == std::string::npos)
 				throw std::runtime_error("Error parsing 'create' command:" 
 										 "error in string type format\n");
 
-			const auto str_size   = type.substr(underscore + 1);
-			statement.str_size[i] = std::stoi(str_size);
-			statement.db_type[i]  = DataBaseType::String;
-		}
+			const auto str_size  = type.substr(underscore + 1);
+			statement.table_layout[i] = 
+				DatabaseType(Type::String, std::stoi(str_size));
+		} else
+			statement.table_layout[i] = 
+				DatabaseType(type_map.find(type)->second);	
 	}
 }
 
 /********************************************************************************/
 
 void Parser::parse_from(std::string_view sv) {
-	const size_t colon = sv.find(':');
+	const auto colon = sv.find(':');
 	if (colon == std::string_view::npos) {
 		statement.table_name[0] = sv;
 		return;
 	}
 	
-	const size_t colon_2 = sv.find_last_of(':');
+	const auto colon_2 = sv.find_last_of(':');
 	if (colon_2 == std::string_view::npos)
 		throw std::runtime_error("Error parsing 'from' command:" 
 								 "second colon expected\n");
@@ -220,19 +229,24 @@ void Parser::parse_from(std::string_view sv) {
 	const auto join_tables = sv.substr(colon + 1, colon_2 - colon - 1);
 	const auto join_attr   = sv.substr(colon_2 + 1);
 
-	split_string(join_tables, statement.table_name, "&");
-	split_string(join_attr  , statement.join_attr , "=");
+	split_string(join_tables, statement.table_name, '&');
+	split_string(join_attr  , statement.join_attr , '=');
 }
 
 /********************************************************************************/
 
-void Parser::parse_where(std::string_view sv, size_t layer) {
+void Parser::parse_where(const std::string_view sv, 
+						 const size_t		    layer) 
+{
 	if (layer > MAX_PARAMS) 
 		throw std::runtime_error("Error parsing 'where' command:" 
 								 "where clause is too long\n");
 	int32_t balance = 0;
 	size_t  idx     = 0;
-
+	
+	statement.where_tree[layer].conj = 
+		Conjunctor::NullConj;
+	
 	for (; idx < sv.size(); ++idx) {
 		balance += (sv[idx] == '(');
 		balance -= (sv[idx] == ')');
@@ -244,8 +258,7 @@ void Parser::parse_where(std::string_view sv, size_t layer) {
 		}
 	}
 
-	if (statement.where_tree[layer].conj !=
-		Conjunctor::NullConj) {
+	if (statement.where_tree[layer].conj != Conjunctor::NullConj) {
 		auto lhs = sv.substr(0, idx);
 		auto rhs = sv.substr(idx + 1);
 		parse_where(get_bracket_content(lhs), left(layer));
@@ -256,7 +269,9 @@ void Parser::parse_where(std::string_view sv, size_t layer) {
 
 /********************************************************************************/
 
-void Parser::parse_conditional(std::string_view sv, size_t layer) {
+void Parser::parse_conditional(const std::string_view sv, 
+							   const size_t			  layer) 
+{
 	Comparator comp;
 	size_t	   comp_pos;
 	size_t     size_key;
@@ -278,29 +293,14 @@ void Parser::parse_conditional(std::string_view sv, size_t layer) {
 
 size_t Parser::split_string(std::string_view sv,
 							std::span<std::string_view> tokens,
-							const std::string delimiters) 
+							const char delimiter) 
 {
-	size_t idx = 0, end = 0;
+	size_t idx = 0;
 	
-	auto search_delims = [&delimiters, &sv]() -> size_t {
-		size_t d_pos = sv.size();
-
-		for (char delim : delimiters)
-			if (auto pos = sv.find(delim);
-				pos != std::string_view::npos)
-				d_pos = std::min(d_pos, pos);
-
-		return d_pos;
-	};
-	
-	end = search_delims();
-	
-	while (end < sv.size()) {
-		tokens[idx++] = sv.substr(0, end);
-		sv  = sv.substr(end + 1); 
-		end = search_delims();
+	for (auto part : sv | std::views::split(delimiter)) {
+		auto to_string_view = std::string_view(&*part.begin(), part.size());
+		tokens[idx++] = to_string_view;
 	}
-	
-	tokens[idx] = sv;
-	return idx + 1; 
+
+	return idx; 
 }
