@@ -42,6 +42,8 @@ const std::unordered_map<char, Conjunctor> conj_map {
   {'&', Conjunctor::And}, {'|', Conjunctor::Or}
 };
 
+/********************************************************************************/
+
 struct Parser {
   Command		   get_command        (std::string_view& sv);
   std::string_view get_bracket_content(std::string_view& sv);
@@ -51,18 +53,18 @@ struct Parser {
   void parse_query      (const std::string& user_query);
   void parse_bracket    (const Command    command,
                          std::string_view br_content, 
-					     std::string_view extra_content = "");
+                         std::string_view extra_content = "");
   void parse_create     (std::string_view sv_br, 
                          std::string_view sv_extra);
   void parse_from       (std::string_view sv);
   void parse_where      (const std::string_view sv, 
-						 const size_t			layer);
+                         const size_t			layer);
   void parse_conditional(const std::string_view sv, 
-						 const size_t			layer);
+                         const size_t			layer);
 
   size_t split_string(std::string_view sv,
-					  std::span<std::string_view> tokens,
-					  const char delimiter);
+                      std::span<std::string_view> tokens,
+                      const char delimiter);
 
   std::string  query;
   SQLStatement statement;
