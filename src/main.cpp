@@ -6,7 +6,7 @@ int main() {
   
   for (std::string line; std::cout << "CoroDB> " && std::getline(std::cin, line);) {
 	if (!line.empty()) {
-	  parser.parse_query(line);
+      parser.parse_query(line);
 	}
   }
 }

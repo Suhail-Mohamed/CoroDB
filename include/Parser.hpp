@@ -50,10 +50,10 @@ struct Parser {
 
   void parse_query      (const std::string& user_query);
   void parse_bracket    (const Command    command,
-						 std::string_view br_content, 
-						 std::string_view extra_content = "");
+                         std::string_view br_content, 
+					     std::string_view extra_content = "");
   void parse_create     (std::string_view sv_br, 
-						 std::string_view sv_extra);
+                         std::string_view sv_extra);
   void parse_from       (std::string_view sv);
   void parse_where      (const std::string_view sv, 
 						 const size_t			layer);

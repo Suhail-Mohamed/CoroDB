@@ -80,7 +80,7 @@ struct DatabaseType {
     : type{t}, type_size{size} {};
 
   friend std::ostream& operator<<(std::ostream& os, 
-				  const DatabaseType& data)
+  const DatabaseType& data)
   {
     os << "[Type: ";
     switch (data.type) {
@@ -111,8 +111,8 @@ struct ASTNode {
 };
 
 void print_ast(const std::array<ASTNode, MAX_PARAMS>& ast, 
-	       size_t layer,
-	       size_t num_spaces);
+               size_t layer,
+               size_t num_spaces);
 
 /********************************************************************************/
 /* Record information */
@@ -127,8 +127,8 @@ size_t calc_record_size(const RecordLayout& layout);
 
 template <typename T>
 concept Iterable = requires(T t) {
-  { t.begin() } -> std::forward_iterator;
-  { t.end() }   -> std::forward_iterator;
+{ t.begin() } -> std::forward_iterator;
+{ t.end() }   -> std::forward_iterator;
 };
 
 template <Iterable Container>
@@ -136,7 +136,7 @@ void print_n_elements(const Container& container, size_t n) {
   /* print n elements from front of container */
   std::cout << "[";
   for (const auto& value : container | std::views::take(n))
-  std::cout << value << ", ";
+    std::cout << value << ", ";
   std::cout << "]\n";
 }
 
@@ -200,7 +200,7 @@ struct SQLStatement {
   ASTTree     where_tree;
 
   friend std::ostream& operator<<(std::ostream&	os, 
-  const SQLStatement& stmt) 
+                                  const SQLStatement& stmt) 
   {
     os << "	Command        : " << swap_command_map.at(stmt.command) << "\n";
     os << "	Table names    : " << stmt.table_name[0] << ", " << stmt.table_name[1] << "\n";
