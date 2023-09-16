@@ -94,8 +94,8 @@ private:
 
   Iouring() {
     if (auto err = io_uring_queue_init(QUEUE_SIZE, &ring, 0);
-      err < 0)
+        err < 0)
       throw std::runtime_error("Error: initializing io_uring, " + 
-    std::to_string(err));
+                               std::to_string(err));
   }
 };

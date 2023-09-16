@@ -45,7 +45,7 @@ const std::unordered_map<char, Conjunctor> conj_map {
 /********************************************************************************/
 
 struct Parser {
-  Command		   get_command        (std::string_view& sv);
+  Command          get_command        (std::string_view& sv);
   std::string_view get_bracket_content(std::string_view& sv);
 
   bool is_valid_bracket(const std::string_view sv);
@@ -58,9 +58,9 @@ struct Parser {
                          std::string_view sv_extra);
   void parse_from       (std::string_view sv);
   void parse_where      (const std::string_view sv, 
-                         const size_t			layer);
+                         const size_t           layer);
   void parse_conditional(const std::string_view sv, 
-                         const size_t			layer);
+                         const size_t           layer);
 
   size_t split_string(std::string_view sv,
                       std::span<std::string_view> tokens,

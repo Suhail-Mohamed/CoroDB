@@ -80,7 +80,7 @@ struct DatabaseType {
     : type{t}, type_size{size} {};
 
   friend std::ostream& operator<<(std::ostream& os, 
-  const DatabaseType& data)
+                                  const DatabaseType& data)
   {
     os << "[Type: ";
     switch (data.type) {

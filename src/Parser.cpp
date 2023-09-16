@@ -199,7 +199,7 @@ void Parser::parse_create(std::string_view sv_br,
         throw std::runtime_error("Error parsing 'create' command:" 
                                  "error in string type format\n");
 
-      const auto str_size  = type.substr(underscore + 1);
+      const auto str_size = type.substr(underscore + 1);
       statement.table_layout[i] = 
         DatabaseType(Type::String, std::stoi(str_size));
       } else

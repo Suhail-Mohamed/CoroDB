@@ -13,7 +13,7 @@
 /*
     +---------------------------------+
     |            Page Header =        |
-    |       number of records		  |
+    |       number of records         |
     +---------------------------------+
     |           Record 0              |
     +---------------------------------+
@@ -46,20 +46,20 @@ struct RecordResponse {
 };
 
 struct PageHandler {
-  void init_handler(Page*			     page,
+  void init_handler(Page*			   page,
                     const RecordLayout layout,
-                    const int32_t	     p_id,
-                    const int32_t	     fd,
+                    const int32_t	   p_id,
+                    const int32_t	   fd,
                     const PageType     p_type);
 
   PageResponse write_to_page (off_t&	    write_offset, 
                               RecordData& record_data, 
                               const DatabaseType& db_type);
-  off_t		   read_from_page(const off_t read_offset, 
+  off_t        read_from_page(const off_t read_offset, 
                               RecordData& record_data, 
                               const DatabaseType& db_type);
 
-  PageResponse   add_record	  (Record& record);
+  PageResponse   add_record   (Record& record);
   PageResponse   delete_record(const uint32_t record_num);
   RecordResponse read_record  (const uint32_t record_num);
   PageResponse   move_record  (const uint32_t new_record_num, 
