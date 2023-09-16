@@ -1,20 +1,50 @@
 [
 {
-  "directory": "/home/SuMo/Documents/Projects/bad_DB/build",
-  "command": "/usr/bin/c++  -I/home/SuMo/Documents/Projects/bad_DB/include -g -std=c++20 -o CMakeFiles/badDB.dir/src/Parser.cpp.o -c /home/SuMo/Documents/Projects/bad_DB/src/Parser.cpp",
-  "file": "/home/SuMo/Documents/Projects/bad_DB/src/Parser.cpp",
-  "output": "CMakeFiles/badDB.dir/src/Parser.cpp.o"
+  "directory": "/home/SuMo/Documents/Projects/CoroDB/build",
+  "command": "/usr/bin/c++  -I/home/SuMo/Documents/Projects/CoroDB/include -g -std=gnu++23 -o CMakeFiles/CoroDB.dir/src/CoroPool.cpp.o -c /home/SuMo/Documents/Projects/CoroDB/src/CoroPool.cpp",
+  "file": "/home/SuMo/Documents/Projects/CoroDB/src/CoroPool.cpp",
+  "output": "CMakeFiles/CoroDB.dir/src/CoroPool.cpp.o"
 },
 {
-  "directory": "/home/SuMo/Documents/Projects/bad_DB/build",
-  "command": "/usr/bin/c++  -I/home/SuMo/Documents/Projects/bad_DB/include -g -std=c++20 -o CMakeFiles/badDB.dir/src/Util.cpp.o -c /home/SuMo/Documents/Projects/bad_DB/src/Util.cpp",
-  "file": "/home/SuMo/Documents/Projects/bad_DB/src/Util.cpp",
-  "output": "CMakeFiles/badDB.dir/src/Util.cpp.o"
+  "directory": "/home/SuMo/Documents/Projects/CoroDB/build",
+  "command": "/usr/bin/c++  -I/home/SuMo/Documents/Projects/CoroDB/include -g -std=gnu++23 -o CMakeFiles/CoroDB.dir/src/DiskManager.cpp.o -c /home/SuMo/Documents/Projects/CoroDB/src/DiskManager.cpp",
+  "file": "/home/SuMo/Documents/Projects/CoroDB/src/DiskManager.cpp",
+  "output": "CMakeFiles/CoroDB.dir/src/DiskManager.cpp.o"
 },
 {
-  "directory": "/home/SuMo/Documents/Projects/bad_DB/build",
-  "command": "/usr/bin/c++  -I/home/SuMo/Documents/Projects/bad_DB/include -g -std=c++20 -o CMakeFiles/badDB.dir/src/main.cpp.o -c /home/SuMo/Documents/Projects/bad_DB/src/main.cpp",
-  "file": "/home/SuMo/Documents/Projects/bad_DB/src/main.cpp",
-  "output": "CMakeFiles/badDB.dir/src/main.cpp.o"
+  "directory": "/home/SuMo/Documents/Projects/CoroDB/build",
+  "command": "/usr/bin/c++  -I/home/SuMo/Documents/Projects/CoroDB/include -g -std=gnu++23 -o CMakeFiles/CoroDB.dir/src/Iouring.cpp.o -c /home/SuMo/Documents/Projects/CoroDB/src/Iouring.cpp",
+  "file": "/home/SuMo/Documents/Projects/CoroDB/src/Iouring.cpp",
+  "output": "CMakeFiles/CoroDB.dir/src/Iouring.cpp.o"
+},
+{
+  "directory": "/home/SuMo/Documents/Projects/CoroDB/build",
+  "command": "/usr/bin/c++  -I/home/SuMo/Documents/Projects/CoroDB/include -g -std=gnu++23 -o CMakeFiles/CoroDB.dir/src/PageHandler.cpp.o -c /home/SuMo/Documents/Projects/CoroDB/src/PageHandler.cpp",
+  "file": "/home/SuMo/Documents/Projects/CoroDB/src/PageHandler.cpp",
+  "output": "CMakeFiles/CoroDB.dir/src/PageHandler.cpp.o"
+},
+{
+  "directory": "/home/SuMo/Documents/Projects/CoroDB/build",
+  "command": "/usr/bin/c++  -I/home/SuMo/Documents/Projects/CoroDB/include -g -std=gnu++23 -o CMakeFiles/CoroDB.dir/src/Parser.cpp.o -c /home/SuMo/Documents/Projects/CoroDB/src/Parser.cpp",
+  "file": "/home/SuMo/Documents/Projects/CoroDB/src/Parser.cpp",
+  "output": "CMakeFiles/CoroDB.dir/src/Parser.cpp.o"
+},
+{
+  "directory": "/home/SuMo/Documents/Projects/CoroDB/build",
+  "command": "/usr/bin/c++  -I/home/SuMo/Documents/Projects/CoroDB/include -g -std=gnu++23 -o CMakeFiles/CoroDB.dir/src/ThreadPool.cpp.o -c /home/SuMo/Documents/Projects/CoroDB/src/ThreadPool.cpp",
+  "file": "/home/SuMo/Documents/Projects/CoroDB/src/ThreadPool.cpp",
+  "output": "CMakeFiles/CoroDB.dir/src/ThreadPool.cpp.o"
+},
+{
+  "directory": "/home/SuMo/Documents/Projects/CoroDB/build",
+  "command": "/usr/bin/c++  -I/home/SuMo/Documents/Projects/CoroDB/include -g -std=gnu++23 -o CMakeFiles/CoroDB.dir/src/Util.cpp.o -c /home/SuMo/Documents/Projects/CoroDB/src/Util.cpp",
+  "file": "/home/SuMo/Documents/Projects/CoroDB/src/Util.cpp",
+  "output": "CMakeFiles/CoroDB.dir/src/Util.cpp.o"
+},
+{
+  "directory": "/home/SuMo/Documents/Projects/CoroDB/build",
+  "command": "/usr/bin/c++  -I/home/SuMo/Documents/Projects/CoroDB/include -g -std=gnu++23 -o CMakeFiles/CoroDB.dir/src/main.cpp.o -c /home/SuMo/Documents/Projects/CoroDB/src/main.cpp",
+  "file": "/home/SuMo/Documents/Projects/CoroDB/src/main.cpp",
+  "output": "CMakeFiles/CoroDB.dir/src/main.cpp.o"
 }
 ]

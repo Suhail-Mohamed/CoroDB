@@ -55,7 +55,7 @@ void Parser::parse_query(const std::string& user_query) {
 	
 	for (char& c : query) 
 		c = std::tolower(c);
-	
+
 	query.erase(std::remove_if(std::begin(query), std::end(query), 
 				[](unsigned char c) { return std::isspace(c); }),
 			    std::end(query));
@@ -163,6 +163,9 @@ void Parser::parse_bracket(const Command	command,
 			if (!is_valid_bracket(br_content)) 
 				throw std::runtime_error("Error parsing 'where' command:" 
 										 "Invalid bracketing\n");
+			std::fill(std::begin(statement.where_tree), 
+					  std::end(statement.where_tree),
+					  ASTNode{});
 			parse_where(br_content, 0);
 			break;
 		/*************************/
@@ -243,9 +246,6 @@ void Parser::parse_where(const std::string_view sv,
 								 "where clause is too long\n");
 	int32_t balance = 0;
 	size_t  idx     = 0;
-	
-	statement.where_tree[layer].conj = 
-		Conjunctor::NullConj;
 	
 	for (; idx < sv.size(); ++idx) {
 		balance += (sv[idx] == '(');

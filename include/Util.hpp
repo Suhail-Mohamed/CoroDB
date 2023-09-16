@@ -135,7 +135,7 @@ void print_n_elements(const Container& container, size_t n) {
     /* print n elements from front of container */
     std::cout << "[";
     for (const auto& value : container | std::views::take(n))
-        std::cout << value << " ";
+        std::cout << value << ", ";
     std::cout << "]\n";
 }
 
@@ -173,6 +173,7 @@ using AttrList    = std::array<std::string_view, MAX_PARAMS>;
 using ASTTree     = std::array<ASTNode         , MAX_PARAMS>;
 using ForeignData = std::array<std::string_view, MAX_FOREIGN>; 
 using PrimKeyList = std::array<std::string_view, MAX_PRIM_KEY>; 
+using LayoutList  = std::array<DatabaseType    , MAX_PARAMS>; 
 using TableData   = std::array<std::string_view, 2>;
 
 struct SQLStatement {
@@ -188,14 +189,14 @@ struct SQLStatement {
     TableData table_name;
     TableData join_attr;
     
-    ForeignData  foreign_attr;
-    ForeignData  foreign_table;
-    PrimKeyList  prim_key;
-    RecordLayout table_layout;
-    AttrList	 table_attr;
-    AttrList	 set_attr;
-    AttrList	 set_value;
-    ASTTree      where_tree;
+    ForeignData foreign_attr;
+    ForeignData foreign_table;
+    PrimKeyList prim_key;
+    LayoutList  table_layout;
+    AttrList	table_attr;
+    AttrList	set_attr;
+    AttrList	set_value;
+    ASTTree     where_tree;
 
     friend std::ostream& operator<<(std::ostream&	os, 
 				    const SQLStatement& stmt) 

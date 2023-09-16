@@ -18,6 +18,7 @@ insert (table) (john, downtown, accountant)
 
 create (employees) (name:s_20, address:s_20, salary:int, department:s_35) primary_key(name, address, department) foreign_key (department:department_table)
 
+* test invalid bracketting *
 where ((name == fred | name == mike) & address == 150 Ur Moms House | ((name == fred & age == 12) | (name == mike | country != canada)) 
 
 select (a, b, c) from (l : accounting & tech : salary = salary) where (name == fred & salary >= 70000)
