@@ -1,7 +1,4 @@
 #include "PageHandler.hpp"
-#include "Iouring.hpp"
-#include <unistd.h>
-#include <variant>
 
 void PageHandler::init_handler(Page*              page,
                                const RecordLayout layout,
@@ -10,6 +7,7 @@ void PageHandler::init_handler(Page*              page,
                                const PageType     p_type) 
 {
   page_id       = p_id;
+  page_ref      = 1;
   page_fd       = fd;
   page_type     = p_type;
   page_ptr      = page;
@@ -74,9 +72,9 @@ PageResponse PageHandler::write_to_page(off_t&      write_offset,
 
 /********************************************************************************/
 
-off_t PageHandler::read_from_page(const off_t read_offset, 
-                                  RecordData& record_data, 
-                                  const DatabaseType& db_type) 
+size_t PageHandler::read_from_page(const off_t read_offset, 
+                                   RecordData& record_data, 
+                                   const DatabaseType& db_type) 
 {
   const void* page_offset = page_ptr->data() + read_offset;
 
@@ -111,8 +109,7 @@ PageResponse PageHandler::add_record(Record& record) {
     from_tomb    = true;
   } else if (page_cursor + record_size < PAGE_SIZE)
     write_offset = page_cursor;
-  else 
-    return PageResponse::PageFull;
+  else return PageResponse::PageFull;
 
   for (size_t i = 0; i < record_layout.size(); ++i)
       if (write_to_page(write_offset, record[i], record_layout[i]) ==
@@ -146,8 +143,7 @@ PageResponse PageHandler::delete_record(const uint32_t record_num) {
   if (record_num == num_records - 1) {
     page_cursor -= record_size;
     --num_records;
-  } else 
-    tomb_stones.push_back(record_num);
+  } else tomb_stones.push_back(record_num);
 
   return PageResponse::Success;
 }
@@ -203,7 +199,6 @@ PageResponse PageHandler::compact_page() {
   if (tomb_stones.empty()) return PageResponse::Success;
 
   const size_t tomb_stones_size = tomb_stones.size();
-
   std::sort(std::begin(tomb_stones), 
             std::end(tomb_stones), std::greater<int>());
 

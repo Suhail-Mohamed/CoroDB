@@ -273,7 +273,7 @@ void Parser::parse_conditional(const std::string_view sv,
                                const size_t           layer) 
 {
   Comparator comp;
-  size_t	 comp_pos;
+  size_t     comp_pos;
   size_t     size_key;
 
   for (auto [key, value] : comp_map)

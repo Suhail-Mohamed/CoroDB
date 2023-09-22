@@ -46,16 +46,16 @@ struct RecordResponse {
 };
 
 struct PageHandler {
-  void init_handler(Page*			   page,
+  void init_handler(Page*              page,
                     const RecordLayout layout,
-                    const int32_t	   p_id,
-                    const int32_t	   fd,
+                    const int32_t      p_id,
+                    const int32_t      fd,
                     const PageType     p_type);
 
-  PageResponse write_to_page (off_t&	    write_offset, 
+  PageResponse write_to_page (off_t&      write_offset, 
                               RecordData& record_data, 
                               const DatabaseType& db_type);
-  off_t        read_from_page(const off_t read_offset, 
+  size_t       read_from_page(const off_t read_offset, 
                               RecordData& record_data, 
                               const DatabaseType& db_type);
 
@@ -82,7 +82,7 @@ struct PageHandler {
 
   bool in_tomb_stones(const uint32_t record_num) {
     return std::find(std::begin(tomb_stones), std::end(tomb_stones), record_num) != 
-    std::end(tomb_stones);
+           std::end(tomb_stones);
   }
 
   off_t record_num_to_offset(const uint32_t record_num) {
@@ -94,8 +94,9 @@ struct PageHandler {
 
   int32_t  num_records = 0; 
   int32_t  page_fd     = -1;
+  int32_t  page_ref    = 0;
   int32_t  page_usage  = 0;
-  int32_t  page_id	   = 0;
+  int32_t  page_id     = 0;
   off_t	   page_cursor = 0;
   size_t   record_size = 0;	
   Page*	   page_ptr    = nullptr;
