@@ -180,7 +180,7 @@ struct DiskManager {
   
   [[nodiscard]] Task<PageHandler*> get_page(const int32_t  page_id,
                                             const PageType page_type,
-                                            const SchOpt option = SchOpt::Schedule);
+                                            const SchOpt   option = SchOpt::Schedule);
 private:
   DiskManager();
 

@@ -79,7 +79,7 @@ Task<PageHandler*> DiskManager::read_page(const int32_t fd,
 
 Task<void> DiskManager::write_page(const int32_t  page_id,
                                    const PageType page_type,
-                                   const SchOpt option) 
+                                   const SchOpt   option) 
 {
   if (option == SchOpt::Schedule) co_await io_scheduler.schedule();
   BaseBundle* b_bundle = bundles[page_type];
@@ -95,7 +95,7 @@ Task<void> DiskManager::write_page(const int32_t  page_id,
 
 Task<void> DiskManager::return_page(const int32_t  page_id,
                                     const PageType page_type,
-                                    const SchOpt option)
+                                    const SchOpt   option)
 {
   if (option == SchOpt::Schedule) co_await io_scheduler.schedule();
   BaseBundle* b_bundle = bundles[page_type];
@@ -121,7 +121,7 @@ Task<void> DiskManager::return_page(const int32_t  page_id,
 
 Task<PageHandler*> DiskManager::get_page(const int32_t  page_id,
                                          const PageType page_type,
-                                         const SchOpt option) 
+                                         const SchOpt   option) 
 {
   if (option == SchOpt::Schedule) co_await io_scheduler.schedule();
   BaseBundle* b_bundle = bundles[page_type];
