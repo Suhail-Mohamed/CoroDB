@@ -18,7 +18,7 @@
 struct IoScheduler {
   /* Allows us to pause at some scheduled point and add
      the coroutine to our queue, then resume it when it
-     has been added to the coro_queue */
+     has been popped off the coro_queue */
   struct SchedulerAwaitable {
     SchedulerAwaitable(IoScheduler& scheduler):
       io_scheduler{scheduler} {}
