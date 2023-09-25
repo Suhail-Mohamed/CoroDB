@@ -47,9 +47,9 @@ struct IoScheduler {
 
 private:
   std::queue<std::coroutine_handle<>> coro_queue;
-  std::jthread            io_thread;
-  std::stop_source        io_stop_src;
-  std::mutex              queue_mutex;
+  std::jthread     io_thread;
+  std::stop_source io_stop_src;
+  std::mutex       queue_mutex;
 
   void enqueue(std::coroutine_handle<> coroutine) {
     std::scoped_lock lock(queue_mutex);
