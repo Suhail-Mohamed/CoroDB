@@ -40,7 +40,7 @@ struct IoAwaitable {
      resume the function when we handle the I/O request */
   void await_suspend(std::coroutine_handle<> coroutine) {
     Iouring& io_uring = Iouring::get_instance();
-    sqe_data.handle   = coroutine;
+    sqe_data.coroutine = coroutine;
 
     if (sqe_data.iop == IOP::Read)
       io_uring.read_request(sqe_data);
@@ -81,10 +81,6 @@ struct BaseBundle {
 
 template <size_t N>
 struct PageBundle : BaseBundle {
-  Bitset<N>		     pages_used;
-  std::array<PageHandler, N> page_handlers;
-  std::array<Page, N>	     pages;
-  
   Page& get_page(const int32_t page_id) override {
     return pages[page_id];
   }
@@ -113,6 +109,10 @@ struct PageBundle : BaseBundle {
   void set_page_used(const int32_t page_id, bool value) override {
     pages_used[page_id] = value;
   }
+  
+  Bitset<N>		     pages_used;
+  std::array<PageHandler, N> page_handlers;
+  std::array<Page, N>	     pages;
 };
 
 /********************************************************************************/

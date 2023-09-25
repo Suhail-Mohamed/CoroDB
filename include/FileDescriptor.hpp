@@ -14,9 +14,6 @@ enum class OpenMode {
 }; 
 
 struct FileDescriptor {
-  int32_t fd        = -1;
-  int32_t file_size =  0;
-
   FileDescriptor(const FileDescriptor&) = delete;
   FileDescriptor& operator=(const FileDescriptor&) = delete;
   
@@ -34,12 +31,12 @@ struct FileDescriptor {
     file_size = st.st_size;
   };
 
-  FileDescriptor(FileDescriptor&& other) noexcept 
+  FileDescriptor(FileDescriptor&& other) 
     : fd       {std::exchange(other.fd, -1)}, 
       file_size{std::exchange(other.file_size, 0)} 
   {}
   
-  FileDescriptor& operator=(FileDescriptor&& other) noexcept {
+  FileDescriptor& operator=(FileDescriptor&& other) {
     if (close(fd) == -1) std::cerr << "Error: Cannot close file\n";
 
     fd        = std::exchange(other.fd, -1);;
@@ -51,4 +48,7 @@ struct FileDescriptor {
     if (fd != -1 && close(fd) == -1)
       std::cerr << "Error: Cannot close file dtor()\n"; 
   };
+ 
+  int32_t fd        = -1;
+  int32_t file_size =  0;
 };

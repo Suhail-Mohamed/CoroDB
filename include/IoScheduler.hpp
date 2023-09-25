@@ -20,8 +20,8 @@ struct IoScheduler {
      the coroutine to our queue, then resume it when it
      has been popped off the coro_queue */
   struct SchedulerAwaitable {
-    SchedulerAwaitable(IoScheduler& scheduler):
-      io_scheduler{scheduler} {}
+    SchedulerAwaitable(IoScheduler& scheduler)
+      : io_scheduler{scheduler} {}
 
     /* pause the coroutine we are in right away, the coroutine
        will get started when it is popped off of coro_queue */
@@ -49,15 +49,18 @@ private:
   std::queue<std::coroutine_handle<>> coro_queue;
   std::jthread            io_thread;
   std::stop_source        io_stop_src;
-  std::condition_variable queue_notify;
   std::mutex              queue_mutex;
 
   void enqueue(std::coroutine_handle<> coroutine) {
-    std::unique_lock lock(queue_mutex);
+    std::scoped_lock lock(queue_mutex);
     coro_queue.push(coroutine);
-    queue_notify.notify_one();
   }
   
+  bool queue_empty() {
+    std::scoped_lock lock(queue_mutex);
+    return coro_queue.empty();
+  }
+
   void process_cqe();
   void io_loop();
 };

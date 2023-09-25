@@ -76,9 +76,8 @@ void Parser::parse_query(const std::string& user_query) {
         auto table_name = get_bracket_content(sv_query);
         auto br_content = get_bracket_content(sv_query);
         parse_bracket(command, br_content, table_name);
-      } else
-        parse_bracket(command,
-                      get_bracket_content(sv_query));
+      } else parse_bracket(command, 
+                           get_bracket_content(sv_query));
 
     if (!sv_query.empty())
       command = get_command(sv_query);
@@ -263,8 +262,7 @@ void Parser::parse_where(const std::string_view sv,
     auto rhs = sv.substr(idx + 1);
     parse_where(get_bracket_content(lhs), left(layer));
     parse_where(get_bracket_content(rhs), right(layer));
-  } else
-    parse_conditional(sv, layer);
+  } else parse_conditional(sv, layer);
 }
 
 /********************************************************************************/

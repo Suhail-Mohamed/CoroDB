@@ -45,6 +45,8 @@ struct RecordResponse {
   PageResponse status;
 };
 
+/********************************************************************************/
+
 struct PageHandler {
   void init_handler(Page*              page,
                     const RecordLayout layout,

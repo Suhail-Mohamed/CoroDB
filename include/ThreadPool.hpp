@@ -50,11 +50,11 @@ struct ThreadPool {
   }
 
 private:
-  std::vector<std::jthread>         workers;
   std::queue<std::function<void()>> task_queue;
-  std::mutex                        queue_mutex;
-  std::condition_variable           queue_notify;
-  std::stop_source                  stop_src;
+  std::vector<std::jthread>         workers;
+  std::mutex              queue_mutex;
+  std::condition_variable queue_notify;
+  std::stop_source        stop_src;
   
   void thread_loop();
 };

@@ -62,8 +62,7 @@ Task<PageHandler*> DiskManager::read_page(const int32_t fd,
                          SchOpt::DontSchedule);
   } 
 
-  const int32_t page_id = 
-    co_await IoAwaitable{fd, IOP::Read};
+  const int32_t page_id = co_await IoAwaitable{fd, IOP::Read};
  
   open_files.link_file_to_page(page_id, fd);
   io_bundles.pages_used[page_id] = true;
@@ -83,7 +82,7 @@ Task<void> DiskManager::write_page(const int32_t  page_id,
 {
   if (option == SchOpt::Schedule) co_await io_scheduler.schedule();
   BaseBundle* b_bundle = bundles[page_type];
-  
+ 
   co_await IoAwaitable{b_bundle->get_page_handler(page_id).page_fd, 
                        IOP::Write, 
                        &b_bundle->get_page(page_id)};

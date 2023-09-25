@@ -44,8 +44,8 @@ struct SqeData {
   int32_t fd          = -1;
   off_t   offset      = 0;
   IOP	  iop	      = IOP::NullOp;
-  Page*   page_data   = nullptr;		   
-  std::coroutine_handle<> handle;
+  Page*	  page_data   = nullptr;
+  std::coroutine_handle<> coroutine;
 };
 
 /********************************************************************************/
@@ -65,9 +65,11 @@ struct Iouring {
 
   void cqe_seen(io_uring_cqe* cqe) { io_uring_cqe_seen(&ring, cqe); }	
 
-  bool is_cqe_empty() {
+  /* returns true if the completion queue is empty */
+  bool cqe_empty() {
     io_uring_cqe* cqe;
-    return io_uring_peek_cqe(&ring, &cqe) != 0;
+    io_uring_peek_cqe(&ring, &cqe);
+    return (cqe == nullptr);
   }
 
   int32_t num_submission_queue_entries() { return io_uring_sq_ready(&ring); }
