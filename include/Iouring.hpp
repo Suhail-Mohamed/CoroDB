@@ -51,7 +51,6 @@ struct SqeData {
 /********************************************************************************/
 
 struct Iouring {
-  /* making non-copyable and non-moveable 1 instance only */
   Iouring(const Iouring &)	      = delete;
   Iouring& operator=(const Iouring &) = delete;
   Iouring(Iouring &&)		      = delete;
@@ -87,7 +86,7 @@ struct Iouring {
   void register_buffer_ring(io_uring_buf_ring*		      buff_ring, 
 			    std::array<Page, BUFF_RING_SIZE>& buff_lst);
 
-  /* adds buffer backed to register buffer_ring for re-use */
+  /* adds buffer back to register buffer_ring for re-use */
   void add_buffer(io_uring_buf_ring* buff_ring, 
 		  Page&		     buff,
 		  const uint32_t     buff_id);

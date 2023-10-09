@@ -1,10 +1,11 @@
 #pragma once
 
+#include <cassert>
+#include <cstdint>
 #include <sys/uio.h>
 #include <unistd.h>
 
 #include <algorithm>
-#include <cstdint>
 #include <exception>
 #include <memory>
 #include <span>
@@ -166,21 +167,21 @@ struct DiskManager {
   [[nodiscard]] int32_t lru_replacement(const PageType page_type);
   [[nodiscard]] Task<PageHandler*> create_page(const int32_t fd,
                                                const RecordLayout layout,
-                                               const SchOpt option = SchOpt::Schedule);
+                                               const SchOpt s_opt = SchOpt::Schedule);
   [[nodiscard]] Task<PageHandler*> read_page  (const int32_t fd,
                                                const RecordLayout layout,
-                                               const SchOpt option = SchOpt::Schedule);
+                                               const SchOpt s_opt = SchOpt::Schedule);
 
   Task<void> write_page (const int32_t page_id,
                          PageType      page_type,
-                         const SchOpt  option = SchOpt::Schedule); 
+                         const SchOpt  s_opt = SchOpt::Schedule); 
   Task<void> return_page(const int32_t  page_id, 
                          const PageType page_type,
-                         const SchOpt   option = SchOpt::Schedule);
+                         const SchOpt   s_opt = SchOpt::Schedule);
   
   [[nodiscard]] Task<PageHandler*> get_page(const int32_t  page_id,
                                             const PageType page_type,
-                                            const SchOpt   option = SchOpt::Schedule);
+                                            const SchOpt   s_opt = SchOpt::Schedule);
 private:
   DiskManager();
 

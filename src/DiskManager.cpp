@@ -1,5 +1,4 @@
 #include "DiskManager.hpp"
-#include "Iouring.hpp"
 
 DiskManager::DiskManager() {
   void* buff_ring = nullptr;
@@ -26,9 +25,12 @@ int32_t DiskManager::lru_replacement(const PageType page_type) {
 
 Task<PageHandler*> DiskManager::create_page(const int32_t fd,
                                             const RecordLayout layout,
-                                            const SchOpt option) 
+                                            const SchOpt s_opt) 
 {
-  if (option == SchOpt::Schedule) co_await io_scheduler.schedule();
+  if (s_opt == SchOpt::Schedule) co_await io_scheduler.schedule();
+  
+  const auto find_page = open_files.find_page_id(fd);
+  assert(find_page == -1);
 
   int32_t page_id = find_first_false(np_bundles.pages_used); 
   if (page_id == -1)
@@ -47,14 +49,17 @@ Task<PageHandler*> DiskManager::create_page(const int32_t fd,
 
 Task<PageHandler*> DiskManager::read_page(const int32_t fd,
                                           const RecordLayout layout,
-                                          const SchOpt option) 
+                                          const SchOpt s_opt) 
 {
-  if (option == SchOpt::Schedule) co_await io_scheduler.schedule();
-
-  if (auto find_page = open_files.find_page_id(fd);
-      find_page != -1) 
-    co_return (co_await get_page(find_page, PageType::IO, 
-                                 SchOpt::DontSchedule));
+  if (s_opt == SchOpt::Schedule) co_await io_scheduler.schedule();
+   
+  if (const auto find_page = open_files.find_page_id(fd);
+      find_page != -1) {
+    auto pg_h = co_await get_page(find_page, PageType::IO, 
+                                  SchOpt::DontSchedule); 
+    assert(pg_h);
+    co_return pg_h;
+  } 
   
   if (find_first_false(io_bundles.pages_used) == -1) {
     int32_t replace_page = lru_replacement(PageType::IO); 
@@ -78,9 +83,9 @@ Task<PageHandler*> DiskManager::read_page(const int32_t fd,
 
 Task<void> DiskManager::write_page(const int32_t  page_id,
                                    const PageType page_type,
-                                   const SchOpt   option) 
+                                   const SchOpt   s_opt) 
 {
-  if (option == SchOpt::Schedule) co_await io_scheduler.schedule();
+  if (s_opt == SchOpt::Schedule) co_await io_scheduler.schedule();
   BaseBundle* b_bundle = bundles[page_type];
  
   co_await IoAwaitable{b_bundle->get_page_handler(page_id).page_fd, 
@@ -94,9 +99,9 @@ Task<void> DiskManager::write_page(const int32_t  page_id,
 
 Task<void> DiskManager::return_page(const int32_t  page_id,
                                     const PageType page_type,
-                                    const SchOpt   option)
+                                    const SchOpt   s_opt)
 {
-  if (option == SchOpt::Schedule) co_await io_scheduler.schedule();
+  if (s_opt == SchOpt::Schedule) co_await io_scheduler.schedule();
   BaseBundle* b_bundle = bundles[page_type];
   
   --b_bundle->get_page_handler(page_id).page_ref;
@@ -106,23 +111,24 @@ Task<void> DiskManager::return_page(const int32_t  page_id,
                           SchOpt::DontSchedule);
   }
 
-  if (page_type == PageType::IO) {
-    Iouring::get_instance().add_buffer(buff_ring_ptr.get(),
-                                       io_bundles.pages[page_id],
-                                       page_id);
-    open_files.unlink_file(page_id); 
+  if (b_bundle->get_page_handler(page_id).page_ref <= 0) {
+    b_bundle->set_page_used(page_id, false);
+    open_files.unlink_file(page_id);
+    
+    if (page_type == PageType::IO)
+      Iouring::get_instance().add_buffer(buff_ring_ptr.get(),
+                                         io_bundles.pages[page_id],
+                                         page_id);
   }
-
-  b_bundle->set_page_used(page_id, false);
 }
 
 /********************************************************************************/
 
 Task<PageHandler*> DiskManager::get_page(const int32_t  page_id,
                                          const PageType page_type,
-                                         const SchOpt   option) 
+                                         const SchOpt   s_opt) 
 {
-  if (option == SchOpt::Schedule) co_await io_scheduler.schedule();
+  if (s_opt == SchOpt::Schedule) co_await io_scheduler.schedule();
   BaseBundle* b_bundle = bundles[page_type];
   
   if (!b_bundle->get_page_used(page_id)) co_return nullptr;
