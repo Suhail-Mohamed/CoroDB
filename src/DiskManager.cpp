@@ -1,6 +1,6 @@
 #include "DiskManager.hpp"
 
-DiskManager::DiskManager() {
+DiskManager::DiskManager() : table_id_gen(0) {
   void* buff_ring = nullptr;
   bundles         = {&io_bundles, &np_bundles};
 
@@ -40,6 +40,7 @@ Task<PageHandler*> DiskManager::create_page(const int32_t fd,
   np_bundles.page_handlers[page_id].init_handler(&np_bundles.pages[page_id],
                                                  layout,
                                                  fd,
+                                                 table_id_gen++,
                                                  page_id,
                                                  PageType::NonPersistent);
   co_return &np_bundles.page_handlers[page_id];
@@ -74,6 +75,7 @@ Task<PageHandler*> DiskManager::read_page(const int32_t fd,
   io_bundles.page_handlers[page_id].init_handler(&io_bundles.pages[page_id], 
                                                  layout,
                                                  fd,
+                                                 table_id_gen++,
                                                  page_id, 
                                                  PageType::IO);
   co_return &io_bundles.page_handlers[page_id];

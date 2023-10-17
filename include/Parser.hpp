@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <array>
-#include <cassert>
 #include <cctype>
 #include <iostream>
 #include <iterator>
@@ -20,8 +19,7 @@ const std::unordered_map<std::string, Command> command_map {
   {"foreign_key", Command::Foreign}, {"from"        , Command::From}, 
   {"insert"     , Command::Insert} , {"primary_key" , Command::Primary}, 
   {"select"     , Command::Select} , {"set"         , Command::Set}, 
-  {"size"       , Command::Size}   , {"update"      , Command::Update}, 
-  {"vacuum"     , Command::Vacuum} , {"where"       , Command::Where} 
+  {"update"     , Command::Update} , {"where"       , Command::Where} 
 };
 
 const std::unordered_map<std::string, Type> type_map {
@@ -32,19 +30,21 @@ const std::unordered_map<char, TypeOfJoin> join_map {
   {'l', TypeOfJoin::Left}, {'i', TypeOfJoin::Inner}, {'r', TypeOfJoin::Right}	
 };
 
-const std::unordered_map<std::string, Comparator> comp_map {
-  {"==", Comparator::Equal}  , {"!=", Comparator::NotEqual},
-  {">" , Comparator::Larger} , {">=", Comparator::LargerThanOrEqual},
-  {"<" , Comparator::Smaller}, {"<=", Comparator::SmallerThanOrEqual}
+const std::unordered_map<std::string, RecordComp> comp_map {
+    {"==", std::equal_to<RecordData>()}, {"!=", std::not_equal_to<RecordData>()},
+    {"<" , std::less<RecordData>()}    , {"<=", std::less_equal<RecordData>()},
+    {">" , std::greater<RecordData>()} , {">=", std::greater_equal<RecordData>()}
 };
 
-const std::unordered_map<char, Conjunctor> conj_map {
-  {'&', Conjunctor::And}, {'|', Conjunctor::Or}
+const std::unordered_map<char, BoolConj> conj_map {
+  {'&', std::logical_and<>()}, {'|', std::logical_or<>()}
 };
 
 /********************************************************************************/
 
 struct Parser {
+  void reset_parser();
+
   Command          get_command        (std::string_view& sv);
   std::string_view get_bracket_content(std::string_view& sv);
 

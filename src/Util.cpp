@@ -4,25 +4,50 @@ size_t left (size_t layer) { return 2*layer + 1; };
 size_t right(size_t layer) { return 2*layer + 2; };
 
 /********************************************************************************/
+/* debug functions */
+std::string get_comp(const RecordComp& rec_comp) {
+  if (rec_comp.target_type() == typeid(std::equal_to<RecordData>))
+    return "==";
+  else if (rec_comp.target_type() == typeid(std::not_equal_to<RecordData>))
+    return "!=";
+  else if (rec_comp.target_type() == typeid(std::less<RecordData>))
+    return "<";
+  else if (rec_comp.target_type() == typeid(std::less_equal<RecordData>))
+    return "<=";
+  else if (rec_comp.target_type() == typeid(std::greater<RecordData>))
+    return ">";
+  else if (rec_comp.target_type() == typeid(std::greater_equal<RecordData>))
+    return ">=";
+  else 
+    return "UNKNOWN";
+}
+
+std::string get_conj(const BoolConj& bool_conj) {
+  if (bool_conj.target_type() == typeid(std::logical_and<>))
+    return "&";
+  else if (bool_conj.target_type() == typeid(std::logical_or<>))
+    return "|";
+  else
+    return "UNKNOWN";
+}
 
 void print_ast(const std::array<ASTNode, MAX_PARAMS>& ast, 
                size_t layer, 
                size_t num_spaces)
 {
-  if (ast[layer].comp == Comparator::NullComp &&
-    ast[layer].conj == Conjunctor::NullConj) return;
+  if (!ast[layer].comp && !ast[layer].conj) return;
 
   print_ast(ast, left(layer), num_spaces + 1);
 
   std::cout << std::string(num_spaces, '\t');
 
-  if (ast[layer].comp != Comparator::NullComp) {
+  if (ast[layer].comp)
     std::cout << ast[layer].lhs << "  " 
-              << swap_comp_map.at(ast[layer].comp) << "  " 
+              << get_comp(ast[layer].comp) << "  " 
               << ast[layer].rhs << "\n";
-  } else 
+  else 
     std::cout << "Conjunctor: " 
-              << swap_conj_map.at(ast[layer].conj) 
+              << get_conj(ast[layer].conj) 
               << "\n";
 
   print_ast(ast, right(layer), num_spaces + 1); 

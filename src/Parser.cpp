@@ -1,5 +1,21 @@
 #include "Parser.hpp"
 
+void Parser::reset_parser() {
+  statement.command   = Command::NullCommand;
+  statement.join_type = TypeOfJoin::NullJoin;
+
+  statement.num_attr    = 0;
+  statement.num_primary = 0;
+  statement.num_foreign = 0;
+  statement.num_set     = 0;
+  
+  std::fill(std::begin(statement.where_tree), 
+            std::end(statement.where_tree),
+            ASTNode{});
+}
+
+/********************************************************************************/
+
 Command Parser::get_command(std::string_view& sv) {
   const auto br_pos     = sv.find('(');
   const auto sv_command = sv.substr(0, br_pos);
@@ -69,6 +85,7 @@ void Parser::parse_query(const std::string& user_query) {
   command           = get_command(sv_query);
   statement.command = command;
 
+  reset_parser();
   while (!sv_query.empty()) {
     if (command == Command::Create||
         command == Command::CreateIndex||
@@ -104,19 +121,18 @@ void Parser::parse_bracket(const Command    command,
     /*************************/
     case Command::Foreign: {
       statement.num_foreign = 
-        split_string(br_content, statement.foreign_attr, ',');
+        split_string(br_content, statement.foreign_keys, ',');
 
       for (size_t i = 0; i < statement.num_foreign; ++i) {
-        const auto sv    = statement.foreign_attr[i];
+        const auto sv    = statement.foreign_keys[i];
         const auto colon = sv.find(':');
 
-        statement.foreign_attr[i]  = sv.substr(0, colon);
+        statement.foreign_keys[i]  = sv.substr(0, colon);
         statement.foreign_table[i] = sv.substr(colon + 1);
       }
       break;
     }
     /*************************/
-    case Command::Vacuum:
     case Command::Delete:
     case Command::Drop: 
     case Command::Update:
@@ -153,19 +169,11 @@ void Parser::parse_bracket(const Command    command,
       break;
     }
     /*************************/
-    case Command::Size:
-      statement.node_size = 
-        stoi(std::string(br_content));
-    break;
-    /*************************/
     case Command::Where:
       if (!is_valid_bracket(br_content)) 
         throw std::runtime_error("Error parsing 'where' command:" 
                                  "Invalid bracketing\n");
-      std::fill(std::begin(statement.where_tree), 
-                std::end(statement.where_tree),
-                ASTNode{});
-      parse_where(br_content, 0);
+        parse_where(br_content, 0);
     break;
     /*************************/
     default: throw std::runtime_error("Error: Invalid command used\n");
@@ -257,7 +265,7 @@ void Parser::parse_where(const std::string_view sv,
     }
   }
 
-  if (statement.where_tree[layer].conj != Conjunctor::NullConj) {
+  if (statement.where_tree[layer].conj) {
     auto lhs = sv.substr(0, idx);
     auto rhs = sv.substr(idx + 1);
     parse_where(get_bracket_content(lhs), left(layer));
@@ -270,7 +278,7 @@ void Parser::parse_where(const std::string_view sv,
 void Parser::parse_conditional(const std::string_view sv, 
                                const size_t           layer) 
 {
-  Comparator comp;
+  RecordComp comp;
   size_t     comp_pos;
   size_t     size_key;
 

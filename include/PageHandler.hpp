@@ -15,7 +15,7 @@
 
 /*
     +---------------------------------+
-    |            Page Header =        |
+    |          Page Header =          |
     |       number of records         |
     +---------------------------------+
     |           Record 0              |
@@ -39,6 +39,7 @@ enum class PageResponse {
   PageEmpty,
   InvalidOffset,
   InvalidRecord,
+  InvalidTimestamp,
   DeletedRecord,
   Success
 };
@@ -51,6 +52,17 @@ enum class LockOpt {
 struct RecordResponse {
   Record       record;
   PageResponse status;
+};
+
+struct PinGuard {
+  PinGuard(bool& page_pin)
+    : pin{page_pin} { pin = true; }
+
+  ~PinGuard() {
+    pin = false;
+  }
+  
+  bool& pin;
 };
 
 /********************************************************************************/
@@ -68,14 +80,18 @@ struct PageHandler {
 
   void init_handler(Page*              page,
                     const RecordLayout layout,
+                    const int32_t      timestamp,
                     const int32_t      p_id,
                     const int32_t      fd,
                     const PageType     p_type);
 
-  PageResponse   add_record   (Record& record);
-  PageResponse   delete_record(const uint32_t record_num);
+  PageResponse   add_record   (Record& record, 
+                               int32_t timestamp = -1);
+  PageResponse   delete_record(const uint32_t record_num, 
+                               int32_t timestamp = -1);
   RecordResponse read_record  (const uint32_t record_num,
-                               const LockOpt l_opt = LockOpt::Lock);
+                               const LockOpt l_opt = LockOpt::Lock,
+                               const int32_t timestamp = -1);
 
   const int32_t get_num_records() const {
     return num_records;
@@ -85,12 +101,20 @@ struct PageHandler {
     return page_id;
   }
 
+  const int32_t get_timestamp() const {
+    return page_timestamp;
+  }
+
   const size_t get_record_size() const {
     return record_size;
   }
 
   const PageType get_page_type() const {
     return page_type;
+  }
+
+  bool is_full() const {
+    return page_cursor + record_size > PAGE_SIZE;
   }
 
   RecordLayout record_layout;
@@ -126,6 +150,7 @@ private:
   bool is_pinned = false;
   bool is_dirty  = false;
 
+  int32_t page_timestamp;
   int32_t page_id     = 0;
   int32_t page_ref    = 0;
   int32_t page_fd     = -1;

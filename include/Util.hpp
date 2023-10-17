@@ -5,6 +5,7 @@
 
 #include <array>
 #include <concepts>
+#include <functional>
 #include <iostream>
 #include <numeric>
 #include <ranges>
@@ -35,29 +36,15 @@ enum Command {
   Size,
   Update,
   Vacuum,
-  Where
-};
-
-enum Comparator {
-  Equal,
-  NotEqual,
-  Larger,
-  Smaller,
-  LargerThanOrEqual,
-  SmallerThanOrEqual,
-  NullComp
-};
-
-enum Conjunctor {
-  And, 
-  Or,
-  NullConj
+  Where,
+  NullCommand
 };
 
 enum TypeOfJoin {
   Left,
   Inner,
-  Right
+  Right,
+  NullJoin
 };
 
 /********************************************************************************/
@@ -99,20 +86,6 @@ struct DatabaseType {
   size_t type_size = 0;
 };
 
-/********************************************************************************/
-/* AST information, used for parsing where clauses */
-size_t left (size_t layer);
-size_t right(size_t layer);
-
-struct ASTNode {
-  Conjunctor	   conj = Conjunctor::NullConj;
-  Comparator	   comp = Comparator::NullComp;
-  std::string_view lhs, rhs;
-};
-
-void print_ast(const std::array<ASTNode, MAX_PARAMS>& ast, 
-               size_t layer,
-               size_t num_spaces);
 
 /********************************************************************************/
 /* Record information */
@@ -121,6 +94,25 @@ using RecordData   = std::variant<int32_t, float, std::string>;
 using Record	   = std::vector<RecordData>;
 
 size_t calc_record_size(const RecordLayout& layout);
+
+/********************************************************************************/
+/* AST information, used for parsing where clauses */
+using RecordComp       = std::function<bool(const RecordData&, const RecordData&)>;
+using BoolConj         = std::function<bool(bool, bool)>;
+
+size_t left (size_t layer);
+size_t right(size_t layer);
+
+struct ASTNode {
+  BoolConj   conj = BoolConj();
+  RecordComp comp = RecordComp();
+
+  std::string_view lhs, rhs;
+};
+
+void print_ast(const std::array<ASTNode, MAX_PARAMS>& ast, 
+               size_t layer,
+               size_t num_spaces);
 
 /********************************************************************************/
 /* DISPLAY FUNCTION AND TYPES CAN BE REMOVED IF NOT DEBUGGING*/
@@ -148,22 +140,13 @@ const std::unordered_map<Command, std::string> swap_command_map {
   {Command::Insert , "insert"}     , {Command::Primary    , "primary_key"},
   {Command::Select , "select"}     , {Command::Set	    , "set"},
   {Command::Size   , "size"}       , {Command::Update     , "update"},
-  {Command::Vacuum , "vacuum"}     , {Command::Where      , "where"}
+  {Command::Vacuum , "vacuum"}     , {Command::Where      , "where"},
+  {Command::NullCommand, "NULL"}
 };
-
 
 const std::unordered_map<TypeOfJoin, std::string> swap_join_map {
-  {TypeOfJoin::Left, "left"}, {TypeOfJoin::Inner, "inner"}, {TypeOfJoin::Right, "right"}	
-};
-
-const std::unordered_map<Comparator, std::string> swap_comp_map {
-  {Comparator::Equal  , "=="}, {Comparator::NotEqual          , "!="},
-  {Comparator::Larger , ">"} , {Comparator::LargerThanOrEqual , ">="},
-  {Comparator::Smaller, "<"} , {Comparator::SmallerThanOrEqual, "<="}
-};
-
-const std::unordered_map<Conjunctor, char> swap_conj_map {
-  {Conjunctor::And, '&'}, {Conjunctor::Or, '|'}
+  {TypeOfJoin::Left, "left"}, {TypeOfJoin::Inner, "inner"}, {TypeOfJoin::Right, "right"},
+  {TypeOfJoin::NullJoin, "NULL"}
 };
 
 /********************************************************************************/
@@ -171,6 +154,7 @@ const std::unordered_map<Conjunctor, char> swap_conj_map {
 /* We only keep 1 parser running in the program so we allocate all the data 
    we need upfront */
 using AttrList    = std::array<std::string_view, MAX_PARAMS>;
+using IndexList   = std::array<std::string_view, 5>;
 using ASTTree     = std::array<ASTNode         , MAX_PARAMS>;
 using ForeignData = std::array<std::string_view, MAX_FOREIGN>; 
 using PrimKeyList = std::array<std::string_view, MAX_PRIM_KEY>; 
@@ -178,19 +162,19 @@ using LayoutList  = std::array<DatabaseType    , MAX_PARAMS>;
 using TableData   = std::array<std::string_view, 2>;
 
 struct SQLStatement {
-  Command    command;
-  TypeOfJoin join_type;
+  Command    command   = Command::NullCommand;
+  TypeOfJoin join_type = TypeOfJoin::NullJoin;
 
   size_t num_attr    = 0;
   size_t num_primary = 0;
   size_t num_foreign = 0;
   size_t num_set     = 0;
-  size_t node_size   = 0;
 
   TableData table_name;
   TableData join_attr;
 
-  ForeignData foreign_attr;
+  IndexList   index_attr;
+  ForeignData foreign_keys;
   ForeignData foreign_table;
   PrimKeyList prim_key;
   LayoutList  table_layout;
@@ -209,7 +193,7 @@ struct SQLStatement {
 
     os << "	Attributes        : "; print_n_elements(stmt.table_attr   , stmt.num_attr);
     os << "	Primary key       : "; print_n_elements(stmt.prim_key     , stmt.num_primary);
-    os << "	Foreign attributes: "; print_n_elements(stmt.foreign_attr , stmt.num_foreign);
+    os << "	Foreign attributes: "; print_n_elements(stmt.foreign_keys , stmt.num_foreign);
     os << "	Foreign tables    : "; print_n_elements(stmt.foreign_table, stmt.num_foreign);
     os << "	Set attributes    : "; print_n_elements(stmt.set_attr     , stmt.num_set);
     os << "	Set values        : "; print_n_elements(stmt.set_value    , stmt.num_set);

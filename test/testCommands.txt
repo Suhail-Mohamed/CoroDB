@@ -14,6 +14,8 @@ where ((name == fred | name == mike) & address == 150 Ur Moms House | (country =
 
 where ((name == fred | name == mike) & address == 150 Ur Moms House | ((name == fred & age == 12) | (name == mike | country != canada))) 
 
+where (name == fred | name == mike & address == 150 Ur Moms House | age == 12 | country != canada)
+
 insert (table) (john, downtown, accountant)
 
 create (employees) (name:s_20, address:s_20, salary:int, department:s_35) primary_key(name, address, department) foreign_key (department:department_table)

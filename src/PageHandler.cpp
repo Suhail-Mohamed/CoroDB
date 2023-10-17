@@ -3,18 +3,20 @@
 void PageHandler::init_handler(Page*              page,
                                const RecordLayout layout,
                                const int32_t      fd,
+                               const int32_t      timestamp,
                                const int32_t      p_id,
                                const PageType     p_type) 
 {
-  page_id       = p_id;
-  page_ref      = 1;
-  page_fd       = fd;
-  page_type     = p_type;
-  page_ptr      = page;
-  is_pinned     = true;
-  record_layout = layout;
-  page_usage    = 1;
-  record_size   = calc_record_size(layout);
+  page_id        = p_id;
+  page_timestamp = timestamp;
+  page_ref       = 1;
+  page_fd        = fd;
+  page_type      = p_type;
+  page_ptr       = page;
+  is_pinned      = true;
+  record_layout  = layout;
+  page_usage     = 1;
+  record_size    = calc_record_size(layout);
   
   if (page_type == PageType::NonPersistent) {
     num_records = 0;
@@ -27,14 +29,19 @@ void PageHandler::init_handler(Page*              page,
 
 /********************************************************************************/
 
-PageResponse PageHandler::add_record(Record& record) {
-  std::unique_lock lock(rw_mutex);
+PageResponse PageHandler::add_record(Record& record, 
+                                     const int32_t timestamp) 
+{
+  if (timestamp != -1 && timestamp != page_timestamp)
+    return PageResponse::InvalidTimestamp;
 
-  off_t write_offset = page_cursor;
+  std::unique_lock lock{rw_mutex};
+  PinGuard pin_guard{is_pinned};
 
-  if (write_offset + record_size > PAGE_SIZE)
+  if (is_full())
     return PageResponse::PageFull;
 
+  off_t write_offset = page_cursor;
   for (size_t i = 0; i < record_layout.size(); ++i)
       if (write_to_page(write_offset, record[i], record_layout[i]) ==
           PageResponse::InvalidRecord)
@@ -51,8 +58,14 @@ PageResponse PageHandler::add_record(Record& record) {
 
 /********************************************************************************/
 
-PageResponse PageHandler::delete_record(const uint32_t record_num) {
-  std::unique_lock lock(rw_mutex);
+PageResponse PageHandler::delete_record(const uint32_t record_num,
+                                        const int32_t timestamp) 
+{
+  if (timestamp != -1 && timestamp != page_timestamp)
+    return PageResponse::InvalidTimestamp;
+
+  std::unique_lock lock{rw_mutex};
+  PinGuard pin_guard{is_pinned};
 
   if (num_records == 0) 
     return PageResponse::PageEmpty;
@@ -80,12 +93,17 @@ PageResponse PageHandler::delete_record(const uint32_t record_num) {
 
 /* zero based indexing for record_num, ie: first record is record_num = 0 */
 RecordResponse PageHandler::read_record(const uint32_t record_num,
-                                        const LockOpt  l_opt) 
+                                        const LockOpt  l_opt,
+                                        const int32_t  timestamp) 
 {
-  if (l_opt == LockOpt::Lock) std::shared_lock lock(rw_mutex);
-  
   Record ret_record;
   
+  if (timestamp != -1 && timestamp != page_timestamp)
+    return {std::move(ret_record), PageResponse::InvalidTimestamp};
+  
+  if (l_opt == LockOpt::Lock) std::shared_lock lock{rw_mutex};
+  PinGuard pin_guard{is_pinned};
+
   if (record_num >= num_records)
     return {std::move(ret_record), PageResponse::InvalidRecord};
   

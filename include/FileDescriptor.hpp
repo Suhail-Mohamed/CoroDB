@@ -24,31 +24,46 @@ struct FileDescriptor {
                                             open(path.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0666);
     if (fd == -1)
       throw std::runtime_error("Error: Cannot open file, file may not exist");
-    
-    struct stat st;
-    if (fstat(fd, &st) == -1)
-      throw std::runtime_error("Error: Cannot get file size");
-    file_size = st.st_size;
   };
 
   FileDescriptor(FileDescriptor&& other) 
-    : fd       {std::exchange(other.fd, -1)}, 
-      file_size{std::exchange(other.file_size, 0)} 
-  {}
+    : fd {std::exchange(other.fd, -1)} {}
   
   FileDescriptor& operator=(FileDescriptor&& other) {
     if (close(fd) == -1) std::cerr << "Error: Cannot close file\n";
 
-    fd        = std::exchange(other.fd, -1);;
-    file_size = std::exchange(other.file_size, 0); 
+    fd = std::exchange(other.fd, -1);;
     return *this;
   }
 
   ~FileDescriptor() { 
     if (fd != -1 && close(fd) == -1)
       std::cerr << "Error: Cannot close file dtor()\n"; 
-  };
+  }
+  
+  int32_t get_file_size() {
+    struct stat st;
+    if (fstat(fd, &st) == -1)
+      throw std::runtime_error("Error: Cannot get file size");
+    
+    return st.st_size;
+  }
+
+  ssize_t file_read(void* buffer, size_t size) {
+    ssize_t bytes_read = read(fd, buffer, size);
+    if (bytes_read == -1)
+      throw std::runtime_error("Error: Failed to read from file");
+    
+    return bytes_read;
+  }
  
-  int32_t fd        = -1;
-  int32_t file_size =  0;
+  ssize_t file_write(const void* buffer, size_t size) {
+    ssize_t bytes_written = write(fd, buffer, size);
+    if (bytes_written == -1)
+      throw std::runtime_error("Error: Failed to write to file");
+    
+    return bytes_written;
+  }
+
+  int32_t fd = -1;
 };

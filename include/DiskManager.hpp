@@ -27,8 +27,8 @@ struct IoAwaitable {
   }
 
   IoAwaitable(const int32_t fd, 
-	      const IOP     iop, 
-	      Page*         page_data)
+	      const IOP iop, 
+	      Page*     page_data)
   : IoAwaitable{fd, iop} 
   { 
     sqe_data.page_data = page_data;
@@ -99,7 +99,9 @@ struct PageBundle : BaseBundle {
     int32_t page_id   = -1;
 
     for (size_t i = 0 ; i < N; ++i)
-      if (page_handlers[i].page_usage < min_usage) {
+      if (!page_handlers[i].is_pinned && 
+          page_handlers[i].page_usage < min_usage) 
+      {
 	min_usage = page_handlers[i].page_usage;
 	page_id   = i;
       }
@@ -155,8 +157,8 @@ enum class SchOpt {
 
 struct DiskManager {
   DiskManager(const DiskManager&)	     = delete;
-  DiskManager& operator=(const DiskManager&) = delete;
   DiskManager(DiskManager &&)		     = delete;
+  DiskManager& operator=(const DiskManager&) = delete;
   DiskManager& operator=(DiskManager&&)	     = delete;
   
   static DiskManager& get_instance() {
@@ -185,6 +187,7 @@ struct DiskManager {
 private:
   DiskManager();
 
+  int32_t                            table_id_gen;
   FileList			     open_files;
   IoScheduler			     io_scheduler;
   PageBundle<BUFF_RING_SIZE>	     io_bundles;
