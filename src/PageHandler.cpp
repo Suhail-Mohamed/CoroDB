@@ -92,7 +92,7 @@ PageResponse PageHandler::delete_record(const uint32_t record_num,
 /********************************************************************************/
 
 PageResponse PageHandler::update_record(const uint32_t record_num,
-                                        Record&  new_record,
+                                        Record&        new_record,
                                         const int32_t  timestamp)
 {
   if (timestamp != DEFAULT_TIMESTAMP && timestamp != page_timestamp)

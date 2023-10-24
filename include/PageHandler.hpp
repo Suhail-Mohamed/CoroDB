@@ -92,7 +92,7 @@ struct PageHandler {
   PageResponse   delete_record(const uint32_t record_num, 
                                const int32_t timestamp = DEFAULT_TIMESTAMP);
   PageResponse   update_record(const uint32_t record_num,
-                               Record& new_record,
+                               Record&        new_record,
                                const int32_t timestamp = DEFAULT_TIMESTAMP);
   RecordResponse read_record  (const uint32_t record_num,
                                const LockOpt l_opt = LockOpt::Lock,
