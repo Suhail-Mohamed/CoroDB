@@ -87,16 +87,16 @@ struct PageHandler {
                     const int32_t      fd,
                     const PageType     p_type);
 
-  PageResponse   add_record   (Record& record, 
-                               const int32_t timestamp = DEFAULT_TIMESTAMP);
+  PageResponse   add_record   (Record&        record, 
+                               const int32_t  timestamp = DEFAULT_TIMESTAMP);
   PageResponse   delete_record(const uint32_t record_num, 
-                               const int32_t timestamp = DEFAULT_TIMESTAMP);
+                               const int32_t  timestamp = DEFAULT_TIMESTAMP);
   PageResponse   update_record(const uint32_t record_num,
                                Record&        new_record,
-                               const int32_t timestamp = DEFAULT_TIMESTAMP);
+                               const int32_t  timestamp = DEFAULT_TIMESTAMP);
   RecordResponse read_record  (const uint32_t record_num,
-                               const LockOpt l_opt = LockOpt::Lock,
-                               const int32_t timestamp = DEFAULT_TIMESTAMP);
+                               const LockOpt  l_opt = LockOpt::Lock,
+                               const int32_t  timestamp = DEFAULT_TIMESTAMP);
   RecordResponse read_record  (const uint32_t record_num,
                                const int32_t  timestamp) 
   { 
