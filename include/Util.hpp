@@ -107,7 +107,7 @@ struct ASTNode {
   BoolConj   conj = BoolConj();
   RecordComp comp = RecordComp();
 
-  std::string_view lhs, rhs;
+  std::string lhs, rhs;
 };
 
 void print_ast(const std::array<ASTNode, MAX_PARAMS>& ast, 
@@ -124,7 +124,7 @@ concept Iterable = requires(T t) {
 };
 
 template <Iterable Container>
-void print_n_elements(const Container& container, size_t n) {
+void print_n_elements(const Container& container, int32_t n) {
   /* print n elements from front of container */
   std::cout << "[";
   for (const auto& value : container | std::views::take(n))
@@ -153,22 +153,22 @@ const std::unordered_map<TypeOfJoin, std::string> swap_join_map {
 
 /* We only keep 1 parser running in the program so we allocate all the data 
    we need upfront */
-using AttrList    = std::array<std::string_view, MAX_PARAMS>;
-using IndexList   = std::array<std::string_view, 5>;
-using ASTTree     = std::array<ASTNode         , MAX_PARAMS>;
-using ForeignData = std::array<std::string_view, MAX_FOREIGN>; 
-using PrimKeyList = std::array<std::string_view, MAX_PRIM_KEY>; 
-using LayoutList  = std::array<DatabaseType    , MAX_PARAMS>; 
-using TableData   = std::array<std::string_view, 2>;
+using AttrList    = std::array<std::string, MAX_PARAMS>;
+using IndexList   = std::array<std::string, 5>;
+using ASTTree     = std::array<ASTNode    , MAX_PARAMS>;
+using ForeignData = std::array<std::string,  MAX_FOREIGN>; 
+using PrimKeyList = std::array<std::string,  MAX_PRIM_KEY>; 
+using LayoutList  = std::array<DatabaseType, MAX_PARAMS>; 
+using TableData   = std::array<std::string, 2>;
 
 struct SQLStatement {
   Command    command   = Command::NullCommand;
   TypeOfJoin join_type = TypeOfJoin::NullJoin;
 
-  size_t num_attr    = 0;
-  size_t num_primary = 0;
-  size_t num_foreign = 0;
-  size_t num_set     = 0;
+  int32_t num_attr    = 0;
+  int32_t num_primary = 0;
+  int32_t num_foreign = 0;
+  int32_t num_set     = 0;
 
   TableData table_name;
   TableData join_attr;

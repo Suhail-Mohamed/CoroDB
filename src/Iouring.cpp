@@ -1,6 +1,6 @@
 #include "Iouring.hpp"
 
-void Iouring::for_each_cqe(const std::function<void(io_uring_cqe *)> &lambda) {
+void Iouring::for_each_cqe(const std::function<void(io_uring_cqe *)>& lambda) {
   io_uring_cqe* cqe  = nullptr;
   uint32_t      head = 0;
 

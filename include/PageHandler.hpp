@@ -33,6 +33,7 @@
 */
 
 static constexpr int32_t HEADER_SIZE = sizeof(int32_t); 
+constexpr int32_t DEFAULT_TIMESTAMP  = -1;
 
 enum class PageResponse {
   PageFull,
@@ -41,6 +42,7 @@ enum class PageResponse {
   InvalidRecord,
   InvalidTimestamp,
   DeletedRecord,
+  Failure,
   Success
 };
 
@@ -86,12 +88,20 @@ struct PageHandler {
                     const PageType     p_type);
 
   PageResponse   add_record   (Record& record, 
-                               int32_t timestamp = -1);
+                               const int32_t timestamp = DEFAULT_TIMESTAMP);
   PageResponse   delete_record(const uint32_t record_num, 
-                               int32_t timestamp = -1);
+                               const int32_t timestamp = DEFAULT_TIMESTAMP);
+  PageResponse   update_record(const uint32_t record_num,
+                               Record& new_record,
+                               const int32_t timestamp = DEFAULT_TIMESTAMP);
   RecordResponse read_record  (const uint32_t record_num,
                                const LockOpt l_opt = LockOpt::Lock,
-                               const int32_t timestamp = -1);
+                               const int32_t timestamp = DEFAULT_TIMESTAMP);
+  RecordResponse read_record  (const uint32_t record_num,
+                               const int32_t  timestamp) 
+  { 
+    return read_record(record_num, LockOpt::Lock, timestamp);
+  }
 
   const int32_t get_num_records() const {
     return num_records;

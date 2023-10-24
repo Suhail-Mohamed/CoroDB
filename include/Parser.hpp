@@ -62,9 +62,9 @@ struct Parser {
   void parse_conditional(const std::string_view sv, 
                          const size_t           layer);
 
-  size_t split_string(std::string_view sv,
-                      std::span<std::string_view> tokens,
-                      const char delimiter);
+  int32_t split_string(std::string_view sv,
+                       std::span<std::string> tokens,
+                       const char delimiter);
 
   std::string  query;
   SQLStatement statement;

@@ -12,7 +12,9 @@
 #include "Iouring.hpp"
 #include "PageHandler.hpp"
 #include "SyncWaiter.hpp"
+#include "Table.hpp"
 #include "Util.hpp"
+
 
 DiskManager& test_dm     = DiskManager::get_instance();
 RecordLayout test_layout = {Type::Integer, Type::Integer, {Type::String, 52}, Type::Float};
@@ -260,6 +262,14 @@ bool test_clear_page(FileDescriptor& read_file) {
 
 /********************************************************************************/
 
+Task<TablePage> test_table_page(const std::string page_path) {
+  FileDescriptor page_file{page_path};
+  PageHandler* pg_h = co_await test_dm.read_page(page_file.fd, 
+                                                 test_layout);
+  co_return TablePage{pg_h, pg_h->get_timestamp()};
+}
+
+/********************************************************************************/
 enum TestPages {
   CreatePage = 0,
   CreateWriteManyPage,
@@ -380,7 +390,9 @@ int main() {
 
   sync_test();
   multithreaded_test();
-  
+ 
+  TablePage t_pg = sync_wait(test_table_page(file_path + "0"));
+  std::cout << "TIMESTAMP: " << t_pg.pg_timestamp << "\n";
   std::cout << "\nAll Tests Passed!\n";
 }
 

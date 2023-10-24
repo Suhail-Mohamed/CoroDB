@@ -193,7 +193,7 @@ void Parser::parse_create(std::string_view sv_br,
   statement.table_name[0] = sv_extra; 
   statement.num_attr      = split_string(sv_br, statement.table_attr, ',');
 
-  for (size_t i = 0; i < statement.num_attr; ++i) {
+  for (int32_t i = 0; i < statement.num_attr; ++i) {
     const auto sv_attr = statement.table_attr[i];
     const auto colon   = sv_attr.find(':');
     const auto type    = std::string(sv_attr. substr(colon + 1));
@@ -280,32 +280,32 @@ void Parser::parse_conditional(const std::string_view sv,
 {
   RecordComp comp;
   size_t     comp_pos;
-  size_t     size_key;
+  size_t     length_key;
 
   for (auto [key, value] : comp_map)
     if (comp_pos = sv.find(key); 
         comp_pos != std::string_view::npos) {
-      comp     = value;
-      size_key = key.size();
+      comp       = value;
+      length_key = key.size();
       break;
     }
 
   statement.where_tree[layer].lhs  = sv.substr(0, comp_pos);
-  statement.where_tree[layer].rhs  = sv.substr(comp_pos + size_key);
+  statement.where_tree[layer].rhs  = sv.substr(comp_pos + length_key);
   statement.where_tree[layer].comp = comp;
 }
 
 /********************************************************************************/
 
-size_t Parser::split_string(std::string_view sv,
-                            std::span<std::string_view> tokens,
+int32_t Parser::split_string(std::string_view sv,
+                            std::span<std::string> tokens,
                             const char delimiter) 
 {
-  size_t idx = 0;
+  int32_t idx = 0;
 
   for (auto part : sv | std::views::split(delimiter)) {
-    auto to_string_view = std::string_view(&*part.begin(), part.size());
-    tokens[idx++] = to_string_view;
+    auto to_string = std::string{&*part.begin(), part.size()};
+    tokens[idx++] = to_string;
   }
 
   return idx; 

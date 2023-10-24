@@ -141,7 +141,7 @@ struct FileList {
       return std::distance(std::begin(fp_pair), itr);
     else return -1;
   }
-  
+
   std::array<int32_t, BUFF_RING_SIZE> fp_pair;
 };
 

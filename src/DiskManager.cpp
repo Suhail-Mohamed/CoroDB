@@ -53,7 +53,8 @@ Task<PageHandler*> DiskManager::read_page(const int32_t fd,
                                           const SchOpt s_opt) 
 {
   if (s_opt == SchOpt::Schedule) co_await io_scheduler.schedule();
-   
+  
+  /* page is in our buffer pool, so we can just return it, no IO */
   if (const auto find_page = open_files.find_page_id(fd);
       find_page != -1) {
     auto pg_h = co_await get_page(find_page, PageType::IO, 
@@ -62,9 +63,10 @@ Task<PageHandler*> DiskManager::read_page(const int32_t fd,
     co_return pg_h;
   } 
   
+  /* no free pages so we have to return one */
   if (find_first_false(io_bundles.pages_used) == -1) {
-    int32_t replace_page = lru_replacement(PageType::IO); 
-    co_await return_page(replace_page, PageType::IO, 
+    int32_t replaced_page = lru_replacement(PageType::IO); 
+    co_await return_page(replaced_page, PageType::IO, 
                          SchOpt::DontSchedule);
   } 
 
