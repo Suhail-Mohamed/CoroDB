@@ -30,14 +30,14 @@ struct FileDescriptor {
     : fd {std::exchange(other.fd, -1)} {}
   
   FileDescriptor& operator=(FileDescriptor&& other) {
-    if (close(fd) == -1) std::cerr << "Error: Cannot close file\n";
+    if (fd > 0 && close(fd) == -1) std::cerr << "Error: Cannot close file\n";
 
-    fd = std::exchange(other.fd, -1);;
+    fd = std::exchange(other.fd, -1);
     return *this;
   }
 
   ~FileDescriptor() { 
-    if (fd != -1 && close(fd) == -1)
+    if (fd > 0 && close(fd) == -1)
       std::cerr << "Error: Cannot close file dtor()\n"; 
   }
   

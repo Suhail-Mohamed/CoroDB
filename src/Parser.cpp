@@ -81,15 +81,16 @@ void Parser::parse_query(const std::string& user_query) {
     exit(1);
   }
 
-  sv_query          = query;
-  command           = get_command(sv_query);
+  sv_query = query;
+  command  = get_command(sv_query);
   statement.command = command;
 
   reset_parser();
   while (!sv_query.empty()) {
     if (command == Command::Create||
         command == Command::CreateIndex||
-        command == Command::Insert) {
+        command == Command::Insert) 
+      {
         auto table_name = get_bracket_content(sv_query);
         auto br_content = get_bracket_content(sv_query);
         parse_bracket(command, br_content, table_name);
@@ -298,8 +299,8 @@ void Parser::parse_conditional(const std::string_view sv,
 /********************************************************************************/
 
 int32_t Parser::split_string(std::string_view sv,
-                            std::span<std::string> tokens,
-                            const char delimiter) 
+                             std::span<std::string> tokens,
+                             const char delimiter) 
 {
   int32_t idx = 0;
 

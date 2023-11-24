@@ -1,5 +1,88 @@
 #include "Iouring.hpp"
 
+/********************************************************************************/
+/*                              Handler functions                               */
+/********************************************************************************/
+
+PageResponse Handler::write_to_page(off_t&      write_offset, 
+                                    RecordData& record_data, 
+                                    const DatabaseType& db_type) 
+{
+  assert(page_ptr);
+  uint8_t* page_offset = page_ptr->data() + write_offset;
+
+  switch (db_type.type) {
+    case Type::Integer:
+      if (!std::holds_alternative<int32_t>(record_data))
+        return PageResponse::InvalidRecord;
+      
+      std::memcpy(page_offset, 
+                  &std::get<int32_t>(record_data),
+                  db_type.type_size); 
+      break;
+    case Type::Float:
+      if (!std::holds_alternative<float>(record_data))
+        return PageResponse::InvalidRecord;
+      
+      std::memcpy(page_offset, 
+                  &std::get<float>(record_data),
+                  db_type.type_size); 
+      break;
+    case Type::String:
+      if (!std::holds_alternative<std::string>(record_data))
+        return PageResponse::InvalidRecord;
+      
+      std::get<std::string>(record_data).
+        resize(db_type.type_size, '\0');
+      
+      std::memcpy(page_offset, 
+                  std::get<std::string>(record_data).c_str(),
+                  db_type.type_size); 
+      break;
+    default: throw std::runtime_error("Error: Invalid database type used");
+  }
+
+  write_offset += db_type.type_size;
+  return PageResponse::Success;
+}
+
+/********************************************************************************/
+
+size_t Handler::read_from_page(const off_t read_offset, 
+                               RecordData& record_data, 
+                               const DatabaseType& db_type) 
+{
+  assert(page_ptr);
+  const uint8_t* page_offset = page_ptr->data() + read_offset;
+
+  switch (db_type.type) {
+    case Type::Integer: {
+      int32_t value;
+      std::memcpy(&value, page_offset, sizeof(value));
+      record_data = value;
+      break;
+    }
+    case Type::Float: {
+      float value;
+      std::memcpy(&value, page_offset, sizeof(value));
+      record_data = value;
+      break;
+    }
+    case Type::String:
+      record_data = std::string(
+          reinterpret_cast<const char*>(page_offset), db_type.type_size
+        );
+      break;
+    default: throw std::runtime_error("Error: Invalid database type used");
+  }
+
+  return db_type.type_size;
+}
+
+/********************************************************************************/
+/*                              Iouring functions                               */
+/********************************************************************************/
+
 void Iouring::for_each_cqe(const std::function<void(io_uring_cqe *)>& lambda) {
   io_uring_cqe* cqe  = nullptr;
   uint32_t      head = 0;

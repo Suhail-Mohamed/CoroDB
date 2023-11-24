@@ -55,8 +55,8 @@ void print_ast(const std::array<ASTNode, MAX_PARAMS>& ast,
 
 /********************************************************************************/
 
-size_t calc_record_size(const RecordLayout& layout) {
-  size_t r_size = std::accumulate(std::begin(layout), std::end(layout), 0,
+int32_t calc_record_size(const RecordLayout& layout) {
+  int32_t r_size = std::accumulate(std::begin(layout), std::end(layout), 0,
                                   [](int acc, const auto& db_type) {
                                     return acc + db_type.type_size;
                                   });

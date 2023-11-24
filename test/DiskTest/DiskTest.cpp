@@ -209,17 +209,12 @@ bool test_read_page_delete_random_records_and_compact(FileDescriptor& file,
     
     if (del_resp != PageResponse::Success)
       break;
-  
-    for (int32_t i = 0 ; i < pg_h->get_num_records(); ++i) {
-      Record rec = pg_h->read_record(i).record;
-      int32_t rec_id  = std::get<int32_t>(rec[0]);
-      assert(!removed_records.count(rec_id));
-    }
+
+    PageResponse pg_resp = pg_h->read_record(rec_id).status;
+    assert(pg_resp == PageResponse::DeletedRecord);
   }
 
   if (flag) *flag = true;
-
-  assert(pg_h->get_num_records() == num_records - num_del);
   return true;
 }
 

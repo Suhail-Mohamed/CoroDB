@@ -68,7 +68,7 @@ template <typename T> struct [[nodiscard]] SyncWaiter {
   using promise_type = SyncWaiterPromise<T>;
   
   SyncWaiter(std::coroutine_handle<SyncWaiterPromise<T>> coro)
-    : coroutine(coro) {}
+    : coroutine{coro} {}
   
   void wait()       { coroutine.promise().completion_flag.wait(false); }
   T    get_result() { return coroutine.promise().get_result(); }

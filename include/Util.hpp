@@ -49,14 +49,14 @@ enum TypeOfJoin {
 
 /********************************************************************************/
 /* Database constants */
-/* maximum number of attributes a database row can have */
-constexpr size_t MAX_PARAMS   = 128;
-constexpr size_t MAX_FOREIGN  = 8;
-constexpr size_t MAX_PRIM_KEY = 16;
+constexpr size_t MAX_PARAMS   = 128; /* maximum number of attributes a database row can have */
+constexpr size_t MAX_FOREIGN  = 3;   /* maximum foreign values a table can have */
+constexpr size_t MAX_PRIM_KEY = 5;   /* maximum size of a key, either primary key or index key */
 
 /********************************************************************************/
 
 constexpr size_t NUMERIC_SIZE = sizeof(int32_t);
+constexpr size_t MAX_STRING   = 50;
 
 struct DatabaseType {    
   DatabaseType() = default;
@@ -64,7 +64,7 @@ struct DatabaseType {
     : type{t}, type_size{NUMERIC_SIZE} {};
 
   DatabaseType(Type t, size_t size)
-    : type{t}, type_size{size} {};
+    : type{t}, type_size{std::min(MAX_STRING, size)} {};
 
   friend std::ostream& operator<<(std::ostream& os, 
                                   const DatabaseType& data)
@@ -93,7 +93,7 @@ using RecordLayout = std::vector<DatabaseType>;
 using RecordData   = std::variant<int32_t, float, std::string>;
 using Record	   = std::vector<RecordData>;
 
-size_t calc_record_size(const RecordLayout& layout);
+int32_t calc_record_size(const RecordLayout& layout);
 
 /********************************************************************************/
 /* AST information, used for parsing where clauses */
@@ -138,7 +138,7 @@ const std::unordered_map<Command, std::string> swap_command_map {
   {Command::Delete , "delete"}     , {Command::Drop       , "drop"},
   {Command::Foreign, "foreign_key"}, {Command::From       , "from"},
   {Command::Insert , "insert"}     , {Command::Primary    , "primary_key"},
-  {Command::Select , "select"}     , {Command::Set	    , "set"},
+  {Command::Select , "select"}     , {Command::Set	  , "set"},
   {Command::Size   , "size"}       , {Command::Update     , "update"},
   {Command::Vacuum , "vacuum"}     , {Command::Where      , "where"},
   {Command::NullCommand, "NULL"}

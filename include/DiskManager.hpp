@@ -13,23 +13,26 @@
 
 #include "Iouring.hpp"
 #include "IoScheduler.hpp"
-#include "PageHandler.hpp"
 #include "Task.hpp"
 
 /********************************************************************************/
 
 struct IoAwaitable { 
-  IoAwaitable(const int32_t fd, 
+  IoAwaitable(const int32_t fd,
+              const off_t   offset,
 	      const IOP     iop) 
   { 
     sqe_data.fd	 = fd; 
     sqe_data.iop = iop;
+    sqe_data.offset = offset;
   }
 
-  IoAwaitable(const int32_t fd, 
-	      const IOP iop, 
-	      Page*     page_data)
-  : IoAwaitable{fd, iop} 
+
+  IoAwaitable(const int32_t fd,
+              const off_t   offset,
+	      const IOP     iop, 
+	      Page*         page_data)
+    : IoAwaitable{fd, offset, iop} 
   { 
     sqe_data.page_data = page_data;
   }
@@ -48,14 +51,14 @@ struct IoAwaitable {
     else io_uring.write_request(sqe_data);
   }
   
-  int32_t await_resume() const {
-    return sqe_data.buff_id;
-  }
+  int32_t await_resume() const 
+  { return sqe_data.buff_id; }
 
   SqeData sqe_data;
 };
 
 /********************************************************************************/
+
 template<size_t N>
 using Bitset = std::array<bool, N>;
 
@@ -73,25 +76,36 @@ size_t find_first_false(const Bitset<N>& b_set) {
 /********************************************************************************/
 
 struct BaseBundle {
-  virtual Page&	       get_page(const int32_t page_id)			= 0;
-  virtual PageHandler& get_page_handler(const int32_t page_id)		= 0; 
-  virtual bool         get_page_used(const int32_t page_id)             = 0;
-  virtual int32_t      get_min_page_usage()                             = 0;
-  virtual void	       set_page_used(const int32_t page_id, bool value) = 0;
+  virtual Page&	   get_page(const int32_t page_id)		    = 0;
+  virtual Handler& get_page_handler(const int32_t page_id)	    = 0; 
+  virtual bool     get_page_used(const int32_t page_id)             = 0;
+  virtual int32_t  get_min_page_usage()                             = 0;
+  virtual void	   set_page_used(const int32_t page_id, bool value) = 0;
 };
 
 template <size_t N>
 struct PageBundle : BaseBundle {
-  Page& get_page(const int32_t page_id) override {
-    return pages[page_id];
-  }
+  Page& get_page(const int32_t page_id) override 
+  { return pages[page_id]; }
 
-  PageHandler& get_page_handler(const int32_t page_id) override {
-    return page_handlers[page_id];
-  }
+  Handler& get_page_handler(const int32_t page_id) override 
+  { return page_handlers[page_id]; }
   
-  bool get_page_used(const int32_t page_id) override {
-    return pages_used[page_id];
+  bool get_page_used(const int32_t page_id) override 
+  { return pages_used[page_id]; }
+
+  int32_t find_page(const int32_t page_fd, 
+                    const int32_t page_num)
+  {
+    auto itr = std::find_if(std::begin(page_handlers), std::end(page_handlers),
+                            [page_fd, page_num] (const Handler& pg_h) {
+                              return pg_h.page_num == page_num &&
+                                     pg_h.page_fd  == page_fd; });
+    
+    if (itr != std::end(page_handlers))
+      return std::distance(std::begin(page_handlers), itr);
+    
+    return -1;
   }
   
   int32_t get_min_page_usage() override {
@@ -109,40 +123,13 @@ struct PageBundle : BaseBundle {
     return page_id;
   }
 
-  void set_page_used(const int32_t page_id, bool value) override {
-    pages_used[page_id] = value;
-  }
+  void set_page_used(const int32_t page_id, 
+                     bool value) override 
+  { pages_used[page_id] = value; }
   
-  Bitset<N>		     pages_used;
-  std::array<PageHandler, N> page_handlers;
-  std::array<Page, N>	     pages;
-};
-
-/********************************************************************************/
-
-struct FileList {
-  FileList() {
-    std::fill(std::begin(fp_pair), std::end(fp_pair), -1);
-  }
-
-  void link_file_to_page(const int32_t page_id, const int32_t fd) {
-    fp_pair[page_id] = fd;
-  }
-
-  void unlink_file(const int32_t page_id) {
-    fp_pair[page_id] = -1;
-  }
-
-  int32_t find_page_id(const int32_t fd) {
-    auto itr = std::find(std::begin(fp_pair), 
-			 std::end(fp_pair), fd); 
-    
-    if (itr != std::end(fp_pair))
-      return std::distance(std::begin(fp_pair), itr);
-    else return -1;
-  }
-
-  std::array<int32_t, BUFF_RING_SIZE> fp_pair;
+  Bitset<N>              pages_used;
+  std::array<Page, N>    pages;
+  std::array<Handler, N> page_handlers;
 };
 
 /********************************************************************************/
@@ -165,30 +152,33 @@ struct DiskManager {
     static DiskManager instance;
     return instance;
   }
-  
-  [[nodiscard]] int32_t lru_replacement(const PageType page_type);
-  [[nodiscard]] Task<PageHandler*> create_page(const int32_t fd,
-                                               const RecordLayout layout,
-                                               const SchOpt s_opt = SchOpt::Schedule);
-  [[nodiscard]] Task<PageHandler*> read_page  (const int32_t fd,
-                                               const RecordLayout layout,
-                                               const SchOpt s_opt = SchOpt::Schedule);
 
+  [[nodiscard]] Task<Handler*> create_page(const int32_t fd,
+                                           const int32_t page_num,
+                                           const RecordLayout layout,
+                                           const SchOpt s_opt = SchOpt::Schedule);
+  [[nodiscard]] Task<Handler*> read_page  (const int32_t fd,
+                                           const int32_t page_num,
+                                           const RecordLayout layout,
+                                           const SchOpt s_opt = SchOpt::Schedule);
+
+private:
+  [[nodiscard]] int32_t lru_replacement(const PageType page_type);
+  
   Task<void> write_page (const int32_t page_id,
+                         const int32_t page_num,
                          PageType      page_type,
                          const SchOpt  s_opt = SchOpt::Schedule); 
-  Task<void> return_page(const int32_t  page_id, 
+  Task<void> return_page(const int32_t  page_id,
                          const PageType page_type,
                          const SchOpt   s_opt = SchOpt::Schedule);
   
-  [[nodiscard]] Task<PageHandler*> get_page(const int32_t  page_id,
-                                            const PageType page_type,
-                                            const SchOpt   s_opt = SchOpt::Schedule);
-private:
-  DiskManager();
+  [[nodiscard]] Task<Handler*> get_page(const int32_t  page_id,
+                                        const PageType page_type,
+                                        const SchOpt   s_opt = SchOpt::Schedule);
 
-  int32_t                            table_id_gen;
-  FileList			     open_files;
+  DiskManager();
+  int32_t                            timestamp_gen;
   IoScheduler			     io_scheduler;
   PageBundle<BUFF_RING_SIZE>	     io_bundles;
   PageBundle<PAGE_POOL_SIZE>	     np_bundles;
