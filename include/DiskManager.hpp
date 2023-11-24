@@ -134,14 +134,6 @@ struct PageBundle : BaseBundle {
 
 /********************************************************************************/
 
-/* sometimes we don't want to add a Task to a scheduler
-   as it could have been called within another Task 
-   and this nesting can cause deadlocks */
-enum class SchOpt {
-  Schedule,
-  DontSchedule
-};
-
 struct DiskManager {
   DiskManager(const DiskManager&)	     = delete;
   DiskManager(DiskManager &&)		     = delete;
@@ -155,27 +147,22 @@ struct DiskManager {
 
   [[nodiscard]] Task<Handler*> create_page(const int32_t fd,
                                            const int32_t page_num,
-                                           const RecordLayout layout,
-                                           const SchOpt s_opt = SchOpt::Schedule);
+                                           const RecordLayout layout);
   [[nodiscard]] Task<Handler*> read_page  (const int32_t fd,
                                            const int32_t page_num,
-                                           const RecordLayout layout,
-                                           const SchOpt s_opt = SchOpt::Schedule);
+                                           const RecordLayout layout);
 
 private:
   [[nodiscard]] int32_t lru_replacement(const PageType page_type);
   
   Task<void> write_page (const int32_t page_id,
                          const int32_t page_num,
-                         PageType      page_type,
-                         const SchOpt  s_opt = SchOpt::Schedule); 
+                         PageType      page_type); 
   Task<void> return_page(const int32_t  page_id,
-                         const PageType page_type,
-                         const SchOpt   s_opt = SchOpt::Schedule);
+                         const PageType page_type);
   
-  [[nodiscard]] Task<Handler*> get_page(const int32_t  page_id,
-                                        const PageType page_type,
-                                        const SchOpt   s_opt = SchOpt::Schedule);
+  [[nodiscard]] Handler* get_page(const int32_t  page_id,
+                                  const PageType page_type);
 
   DiskManager();
   int32_t                            timestamp_gen;
