@@ -7,12 +7,12 @@
 #include <stop_token>
 #include <thread>
 
-/* minus 1 because 1 thread is used to deal with IO tasks, see IoScheduler */
+/* minus 1 because 1 thread is used to deal with IO tasks, see IoProcessor */
 const int32_t NUM_THREADS = 1;
 
 struct CoroPool { 
-  CoroPool(const CoroPool&)	           = delete;
-  CoroPool(CoroPool &&)		           = delete;
+  CoroPool(const CoroPool&)            = delete;
+  CoroPool(CoroPool &&)                = delete;
   CoroPool& operator=(const CoroPool&) = delete;
   CoroPool& operator=(CoroPool&&)      = delete;
 

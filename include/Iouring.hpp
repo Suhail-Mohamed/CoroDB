@@ -112,12 +112,12 @@ struct Handler {
                           const RecordLayout& layout,
                           Record& write_record)
   {
-	for (size_t i = 0; i < layout.size(); ++i)
+    for (size_t i = 0; i < layout.size(); ++i)
       if (write_to_page(write_offset, write_record[i], layout[i]) ==
           PageResponse::InvalidRecord)
         return PageResponse::InvalidRecord;
-	
-	return PageResponse::Success;
+
+    return PageResponse::Success;
   }
   
   bool is_valid_timestamp(const int32_t timestamp) {
@@ -157,7 +157,8 @@ struct RecId {
   
   RecId(int32_t pg_number, int32_t slot_number)
     : page_num{pg_number}, 
-      slot_num{slot_number} {};
+      slot_num{slot_number}
+  {};
 
   bool operator==(const RecId& other) const {
     return other.page_num == page_num && 
@@ -228,7 +229,7 @@ struct Iouring {
   void write_request(SqeData& sqe_data);
 
   /* register a list of buffers (buff_lst) to a buffer ring (buff_ring) */
-  void register_buffer_ring(io_uring_buf_ring*		          buff_ring, 
+  void register_buffer_ring(io_uring_buf_ring*                buff_ring, 
                             std::array<Page, BUFF_RING_SIZE>& buff_lst);
 
   /* adds buffer back to register buffer_ring for re-use */
@@ -236,7 +237,8 @@ struct Iouring {
                   Page&              buff,
                   const uint32_t     buff_id);
   
-  
+
+  /* multiple threads access rings, used to prevent data races */
   std::mutex ring_mutex;
 
 private:
