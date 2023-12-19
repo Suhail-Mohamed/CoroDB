@@ -126,7 +126,7 @@ PageResponse IndexPageHandler::insert_keys(const std::vector<Record>& key_values
 {
   assert(key_idx < page_hdr.num_keys && key_idx >= 0);
 
-  if (page_hdr.num_keys + key_values.size() > meta_data_ptr->get_max_num_keys())
+  if (page_hdr.num_keys + key_values.size() > meta_data_ptr->get_order())
     return PageResponse::PageFull;
   
   page_hdr.num_keys += key_values.size();
@@ -214,7 +214,7 @@ PageResponse IndexPageHandler::insert_rids(const std::vector<RecId>& rid_values,
 {
   assert(rid_idx < page_hdr.num_children && rid_idx >= 0);
   
-  if (page_hdr.num_children + rid_values.size() > meta_data_ptr->get_max_num_keys())
+  if (page_hdr.num_children + rid_values.size() > meta_data_ptr->get_order())
     return PageResponse::PageFull;
   
   page_hdr.num_children += rid_values.size(); 

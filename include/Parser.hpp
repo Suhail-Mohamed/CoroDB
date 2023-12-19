@@ -43,6 +43,13 @@ const std::unordered_map<char, BoolConj> conj_map {
 /********************************************************************************/
 
 struct Parser {
+  void parse_query(const std::string& user_query);
+  
+  /* returns a COPY of the sql_stmt */
+  SQLStatement get_sql_stmt() const 
+  { return statement; }
+
+private:
   void reset_parser();
 
   Command          get_command        (std::string_view& sv);
@@ -50,7 +57,6 @@ struct Parser {
 
   bool is_valid_bracket(const std::string_view sv);
 
-  void parse_query      (const std::string& user_query);
   void parse_bracket    (const Command    command,
                          std::string_view br_content, 
                          std::string_view extra_content = "");

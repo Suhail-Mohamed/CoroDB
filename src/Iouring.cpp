@@ -103,6 +103,7 @@ uint32_t Iouring::submit_and_wait(const uint32_t wait_nr) {
 /********************************************************************************/
 
 void Iouring::read_request(SqeData& sqe_data) {
+  std::lock_guard<std::mutex> lock{ring_mutex};
   io_uring_sqe* sqe = io_uring_get_sqe(&ring);
   sqe->buf_group    = BGID;
   io_uring_prep_read(sqe, 
@@ -117,6 +118,7 @@ void Iouring::read_request(SqeData& sqe_data) {
 /********************************************************************************/
 
 void Iouring::write_request(SqeData& sqe_data) {
+  std::lock_guard<std::mutex> lock{ring_mutex};
   io_uring_sqe* sqe = io_uring_get_sqe(&ring); 
   sqe->buf_group    = BGID;
   io_uring_prep_write(sqe, 

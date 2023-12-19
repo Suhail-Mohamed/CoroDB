@@ -1,12 +1,7 @@
 #include <iostream>
-#include "Parser.hpp"
+#include "DatabaseManager.hpp"
 
 int main() {
-  Parser parser;
-  
-  for (std::string line; std::cout << "CoroDB> " && std::getline(std::cin, line);) {
-    if (!line.empty()) {
-      parser.parse_query(line);
-    }
-  }
+  DatabaseManager& db_manager = DatabaseManager::get_instance();
+  db_manager.start_cmdline();
 }

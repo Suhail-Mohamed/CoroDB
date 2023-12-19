@@ -93,12 +93,14 @@ using RecordLayout = std::vector<DatabaseType>;
 using RecordData   = std::variant<int32_t, float, std::string>;
 using Record	   = std::vector<RecordData>;
 
-int32_t calc_record_size(const RecordLayout& layout);
+int32_t    calc_record_size(const RecordLayout& layout);
+RecordData cast_to(const std::string  attr_value, 
+                   const DatabaseType db_type); 
 
 /********************************************************************************/
 /* AST information, used for parsing where clauses */
-using RecordComp       = std::function<bool(const RecordData&, const RecordData&)>;
-using BoolConj         = std::function<bool(bool, bool)>;
+using RecordComp = std::function<bool(const RecordData&, const RecordData&)>;
+using BoolConj   = std::function<bool(bool, bool)>;
 
 size_t left (size_t layer);
 size_t right(size_t layer);
@@ -153,13 +155,12 @@ const std::unordered_map<TypeOfJoin, std::string> swap_join_map {
 
 /* We only keep 1 parser running in the program so we allocate all the data 
    we need upfront */
-using AttrList    = std::array<std::string, MAX_PARAMS>;
-using IndexList   = std::array<std::string, 5>;
-using ASTTree     = std::array<ASTNode    , MAX_PARAMS>;
-using ForeignData = std::array<std::string,  MAX_FOREIGN>; 
-using PrimKeyList = std::array<std::string,  MAX_PRIM_KEY>; 
+using AttrList    = std::array<std::string , MAX_PARAMS>;
+using ASTTree     = std::array<ASTNode     , MAX_PARAMS>;
+using ForeignData = std::array<std::string , MAX_FOREIGN>; 
+using PrimKeyList = std::array<std::string , MAX_PRIM_KEY>; 
 using LayoutList  = std::array<DatabaseType, MAX_PARAMS>; 
-using TableData   = std::array<std::string, 2>;
+using TableData   = std::array<std::string , 2>;
 
 struct SQLStatement {
   Command    command   = Command::NullCommand;
@@ -173,7 +174,6 @@ struct SQLStatement {
   TableData table_name;
   TableData join_attr;
 
-  IndexList   index_attr;
   ForeignData foreign_keys;
   ForeignData foreign_table;
   PrimKeyList prim_key;
@@ -202,4 +202,10 @@ struct SQLStatement {
     os << "\nWHERE CLAUSE:\n********\n"; print_ast(stmt.where_tree, 0, 0);
     return os;
   }
+
+  std::string get_table_name() const 
+  { return table_name[0]; }
+
+  std::string get_join_table_name() const 
+  { return table_name[1]; }
 };

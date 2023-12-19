@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 
 #include <cstdint>
+#include <filesystem>
 #include <iostream>
 #include <stdexcept>
 #include <utility>
@@ -14,6 +15,10 @@ enum class OpenMode {
 }; 
 
 struct FileDescriptor {
+  FileDescriptor()
+    : fd{-1} 
+  {};
+
   FileDescriptor(const FileDescriptor&) = delete;
   FileDescriptor& operator=(const FileDescriptor&) = delete;
   
@@ -23,14 +28,22 @@ struct FileDescriptor {
     fd = (open_mode == OpenMode::Default) ? open(path.c_str(), O_RDWR) : 
                                             open(path.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0666);
     if (fd == -1)
-      throw std::runtime_error("Error: Cannot open file, file may not exist");
+      throw std::runtime_error("Error: Cannot open (or create) file:" + path + ", file may not exist");
   };
 
+  FileDescriptor(const std::filesystem::path path, 
+                 const OpenMode open_mode = OpenMode::Default)
+    : FileDescriptor{path.string(), open_mode} 
+  {};
+
   FileDescriptor(FileDescriptor&& other) 
-    : fd {std::exchange(other.fd, -1)} {}
+    : fd {std::exchange(other.fd, -1)} 
+  {};
   
   FileDescriptor& operator=(FileDescriptor&& other) {
-    if (fd > 0 && close(fd) == -1) std::cerr << "Error: Cannot close file\n";
+    if (this == &other) return *this;
+    if (fd > 0 && close(fd) == -1) 
+      std::cerr << "Error: Cannot close file\n";
 
     fd = std::exchange(other.fd, -1);
     return *this;
@@ -41,14 +54,16 @@ struct FileDescriptor {
       std::cerr << "Error: Cannot close file dtor()\n"; 
   }
   
-  int32_t get_file_size() {
+  off_t get_file_size() {
     struct stat st;
     if (fstat(fd, &st) == -1)
       throw std::runtime_error("Error: Cannot get file size");
     
     return st.st_size;
   }
-
+  
+  /* if direct writing to file is wanted it is provided, of course not asynchronous 
+     so dont use often */
   ssize_t file_read(void* buffer, size_t size) {
     ssize_t bytes_read = read(fd, buffer, size);
     if (bytes_read == -1)

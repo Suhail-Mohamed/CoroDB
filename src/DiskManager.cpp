@@ -1,6 +1,8 @@
 #include "DiskManager.hpp"
 
-DiskManager::DiskManager() : timestamp_gen{0} {
+DiskManager::DiskManager() 
+  : timestamp_gen{0} 
+{
   void* buff_ring = nullptr;
   bundles         = {&io_bundles, &np_bundles};
 
@@ -11,16 +13,14 @@ DiskManager::DiskManager() : timestamp_gen{0} {
   
   Iouring::get_instance().register_buffer_ring(buff_ring_ptr.get(), 
                                                io_bundles.pages);
-  io_scheduler.start_scheduler();
 }
+
 /********************************************************************************/
 
-Task<Handler*> DiskManager::create_page(const int32_t fd,
-                                        const int32_t page_num,
+Task<Handler*> DiskManager::create_page(const int32_t      fd,
+                                        const int32_t      page_num,
                                         const RecordLayout layout) 
 {
-  co_await io_scheduler.schedule();
- 
   /* Incase someone tries to create the same page twice */
   if (const auto find_page = np_bundles.find_page(fd, page_num);
       find_page != -1)
@@ -49,12 +49,10 @@ Task<Handler*> DiskManager::create_page(const int32_t fd,
 
 /********************************************************************************/
 
-Task<Handler*> DiskManager::read_page(const int32_t fd,
-                                      const int32_t page_num,
+Task<Handler*> DiskManager::read_page(const int32_t      fd,
+                                      const int32_t      page_num,
                                       const RecordLayout layout) 
 {
-  co_await io_scheduler.schedule();
-  
   /* page is in our buffer pool, so we can just return it, no IO */
   if (const auto find_page = io_bundles.find_page(fd, page_num);
       find_page != -1) 

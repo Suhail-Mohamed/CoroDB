@@ -3,11 +3,15 @@
 #include <cstdlib>
 
 #include <filesystem>
+#include <memory>
 #include <stdexcept>
 
 #include "FileDescriptor.hpp"
+#include "Parser.hpp"
+#include "SyncWaiter.hpp"
 #include "TableMetaData.hpp"
 #include "Table.hpp"
+#include "Util.hpp"
 
 struct DatabaseManager {
   DatabaseManager(const DatabaseManager&)	     = delete;
@@ -19,14 +23,15 @@ struct DatabaseManager {
     static DatabaseManager instance;
     return instance;
   }
- 
-  bool create_table(const SQLStatement& sql_stmt);
-  [[nodiscard]] std::shared_ptr<Table> get_table(const std::string& table_name);
+
+  Task<std::vector<TableRecord>> handle_query(const std::string query_string);
+  void start_cmdline();
 
 private:
-  DatabaseManager() {
+  DatabaseManager() 
+    : coro_pool{CoroPool::get_instance()}
+  {
     const char* home = getenv("HOME");
-    
     if (home) {
       db_path = std::filesystem::path(home) / ".coroDB";   
       
@@ -36,7 +41,14 @@ private:
       throw std::runtime_error("Error: home path '~/' cannot be found or accessed");
   };
 
+  Task<void> create_table(SQLStatement& sql_stmt);
+  void       drop_table  (const SQLStatement& sql_stmt);
+  void       load_table  (const std::string table_name);
+  
+  Task<std::vector<TableRecord>> table_query(SQLStatement& sql_stmt);
+ 
+  Parser                parser;
+  CoroPool&             coro_pool;
   std::filesystem::path db_path;
-  std::unordered_map<std::string, std::shared_ptr<Table>> loaded_tables;
+  std::unordered_map<std::string, std::unique_ptr<Table>> loaded_tables;
 };
-

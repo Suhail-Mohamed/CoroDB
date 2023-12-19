@@ -4,6 +4,29 @@ size_t left (size_t layer) { return 2*layer + 1; };
 size_t right(size_t layer) { return 2*layer + 2; };
 
 /********************************************************************************/
+
+int32_t calc_record_size(const RecordLayout& layout) {
+  int32_t r_size = std::accumulate(std::begin(layout), std::end(layout), 0,
+                                  [](int acc, const auto& db_type) {
+                                    return acc + db_type.type_size;
+                                  });
+  return r_size;
+}
+
+/********************************************************************************/
+
+RecordData cast_to(const std::string  attr_value, 
+                   const DatabaseType db_type) 
+{
+  switch (db_type.type) {
+    case Type::String : return attr_value; break;
+    case Type::Integer: return std::stoi(attr_value); break;
+    case Type::Float  : return std::stof(attr_value); break;
+    default: throw std::runtime_error("Error: Invalid DataType cannot cast");
+  }
+}
+
+/********************************************************************************/
 /* debug functions */
 std::string get_comp(const RecordComp& rec_comp) {
   if (rec_comp.target_type() == typeid(std::equal_to<RecordData>))
@@ -53,14 +76,5 @@ void print_ast(const std::array<ASTNode, MAX_PARAMS>& ast,
   print_ast(ast, right(layer), num_spaces + 1); 
 }
 
-/********************************************************************************/
-
-int32_t calc_record_size(const RecordLayout& layout) {
-  int32_t r_size = std::accumulate(std::begin(layout), std::end(layout), 0,
-                                  [](int acc, const auto& db_type) {
-                                    return acc + db_type.type_size;
-                                  });
-  return r_size;
-}
 
 

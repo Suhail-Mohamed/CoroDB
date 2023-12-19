@@ -1,187 +1,224 @@
 #include "Table.hpp"
 
-Table::Table(TableMetaData&  table_meta_data,
-             FileDescriptor& table_pages_filedescriptor)
-  : disk_manager   {DiskManager::get_instance()}, 
-    meta_data      {table_meta_data},
-    table_pages_fd {table_pages_filedescriptor} 
-{}
-
 /********************************************************************************/
 
-Task<QueryReturn> Table::execute_command(const SQLStatement &sql_stmt){
-  co_return QueryReturn{TableResponse::Success};
+Task<std::vector<TableRecord>> Table::execute_command(SQLStatement sql_stmt){
+  switch (sql_stmt.command) {
+    case Command::Delete: 
+      { co_await execute_delete(sql_stmt); co_return std::vector<TableRecord>{}; }
+    case Command::Update: 
+      { co_await execute_update(sql_stmt); co_return std::vector<TableRecord>{}; }
+    case Command::Insert: 
+      { co_await execute_insert(sql_stmt); co_return std::vector<TableRecord>{}; }
+    case Command::Select: co_return co_await execute_select_no_join(sql_stmt);
+    case Command::CreateIndex: { 
+      co_await index_manager.create_index(sql_stmt.table_attr, 
+                                          sql_stmt.num_attr, 
+                                          meta_data.get_record_layout());
+    }
+    default: throw std::runtime_error("Error: Invalid command passed to Table"); 
+  }
 }
 
 /********************************************************************************/
 
-Task<PageResponse> Table::execute_delete(const SQLStatement& sql_stmt,
-                                         const int32_t       page_num) 
-{
-  /*
-  TablePage t_pg    = co_await read_page(page_num);
-  uint32_t  rec_num = 0;
-  std::vector<uint32_t> del_rec;
+Task<void> Table::execute_delete(const SQLStatement& sql_stmt) { 
+  std::vector<RecId> matches {co_await search_table(sql_stmt)};
+  for (auto rec_id : matches) {
+    RecordPageHandler rec_page {std::move(co_await get_page(rec_id.page_num))};
+    rec_page.delete_record(rec_id.slot_num);
+  }
+}
+
+/********************************************************************************/
+
+Task<void> Table::execute_update(const SQLStatement& sql_stmt) {
+  std::vector<RecId> matches {co_await search_table(sql_stmt)};
   
-  for (const auto& [record, response] : t_pg) {
-    if (response != PageResponse::Success)
-      co_return response;
+  for (auto rec_id : matches) {
+    RecordPageHandler rec_page {std::move(co_await get_page(rec_id.page_num))};
+    auto rec_resp = rec_page.read_record(rec_id.slot_num);
+    if (rec_resp.status != PageResponse::Success)
+      continue;
 
-    if (apply_clause(record, sql_stmt.where_tree))
-      del_rec.push_back(rec_num);
-
-    ++rec_num;
-  }
-
-  for (uint32_t rec : del_rec)
-    if (auto response = t_pg.pg_h->delete_record(rec);
-        response != PageResponse::Success)
-      co_return response;
-  */
-  co_return PageResponse::Success;
-}
-
-/********************************************************************************/
-
-Task<PageResponse> Table::execute_update(const SQLStatement& sql_stmt,
-                                         const int32_t       page_num) 
-{
-  /*
-  TablePage t_pg = co_await read_page(page_num);
+    TableRecord table_record {rec_resp.record, &meta_data};
+    for (int32_t attr = 0; attr < sql_stmt.num_set; ++attr)
+      table_record.set_attribute(sql_stmt.set_attr[attr], 
+                                 sql_stmt.set_value[attr]);
   
-  for (auto [record, response] : t_pg) {
-    if (response != PageResponse::Success)
-      co_return response;
-
-    if (apply_clause(record, sql_stmt.where_tree))
-      for (int32_t n_set = 0; n_set < sql_stmt.num_set; ++n_set)
-        set_attribute(record, 
-                      sql_stmt.set_attr[n_set], 
-                      sql_stmt.set_value[n_set]);
+    rec_page.update_record(rec_id.slot_num, table_record.get_record());
   }
-  */
-  co_return PageResponse::Success;
 }
 
 /********************************************************************************/
 
-Task<PageResponse> Table::execute_insert(const SQLStatement& sql_stmt,
-                                         const Record&       potential_insert,
-                                         const int32_t       page_num)
+Task<void> Table::execute_insert(const SQLStatement& sql_stmt)
 {
-  /*
-  TablePage t_pg = co_await read_page(page_num);
+  if (sql_stmt.num_attr != meta_data.get_num_attr()) 
+    co_return;
+
+  TableRecord potential_insert{sql_stmt, &meta_data};
+
+  /* we always have a index on the primary key of a table */
+  BTree prim_key_index {std::move(co_await index_manager.get_index(meta_data.get_primary_key()))};
+  Record key_poten_insert = potential_insert.get_subset(meta_data.get_primary_key()); 
+ 
+  assert(!prim_key_index.is_undefined());
+  std::vector<RecId> matches {co_await prim_key_index.get_matches(key_poten_insert)};
+  if (!matches.empty()) co_return;
+
+  RecId rec_id = co_await push_back_record(potential_insert.get_record());
+  co_await prim_key_index.insert_entry(key_poten_insert, rec_id);
+  co_await index_manager.insert_into_indexes(potential_insert, rec_id);
+}
+
+/********************************************************************************/
+
+Task<std::vector<TableRecord>> Table::execute_select_no_join(const SQLStatement& sql_stmt) {
+  std::vector<RecId>       matches {co_await search_table(sql_stmt)};
+  std::vector<TableRecord> records;
+
+  for (auto rec_id : matches) {
+    RecordPageHandler rec_page {std::move(co_await get_page(rec_id.page_num))};
+    auto rec_resp = rec_page.read_record(rec_id.slot_num);
+    if (rec_resp.status != PageResponse::Success)
+      continue;
+
+    records.emplace_back(rec_resp.record, &meta_data);
+  }
+
+  co_return records;
+}
+
+/********************************************************************************/
+
+/* finds a potential index we can use to search the table if it is not 
+   there then we can just do linear search of table, only finds indexes 
+   on equality terms of the where clause */
+Task<std::vector<RecId>> Table::search_table(const SQLStatement& sql_stmt) {
+  auto [equality_attrs, equality_key] = get_equality_attr(sql_stmt);
+  int32_t index_id = co_await index_manager.find_index(equality_attrs);
+
+  if (index_id == -1) co_return co_await find_matches(sql_stmt);
+  co_return co_await find_matches(sql_stmt, equality_key, index_id);
+}
+
+/********************************************************************************/
+
+/* brute force search of table slow, as we have no choice */
+Task<std::vector<RecId>> Table::find_matches(const SQLStatement& sql_stmt) {
+  std::vector<RecId> matches;
   
-  for (const auto& [record, response] : t_pg) {
-    if (response != PageResponse::Success)
-      co_return response;
+  for (int32_t page = 0; page < meta_data.get_num_pages(); ++page) {
+    RecordPageHandler rec_page {std::move(co_await get_page(page))};
 
-    if(same_primary_key(record, potential_insert))
-      co_return PageResponse::Failure;
+    for (int32_t rec_num = 0; rec_num < rec_page.get_num_records(); ++rec_num) {
+      auto [record, response] = rec_page.read_record(rec_num);
+      if (response != PageResponse::Success)
+        continue;
+
+      if (apply_clause(sql_stmt.where_tree, record))
+        matches.push_back({page, rec_num});
+    }
   }
-  */ 
-  co_return PageResponse::Success;
+
+  co_return matches; 
 }
 
 /********************************************************************************/
 
-Task<PageResponse> Table::execute_select_no_join(const SQLStatement&  sql_stmt,
-                                                 std::vector<Record>& records,
-                                                 const int32_t        page_num) 
+/* searching the table using an index that we were able to find, potentially faster 
+   than linear search of table */
+Task<std::vector<RecId>> Table::find_matches(const SQLStatement& sql_stmt,
+                                             const Record&       equality_key,
+                                             int32_t             index_id) 
 {
-  /*
-  TablePage t_pg = co_await read_page(page_num);
+  std::vector<RecId> matches;
+  BTree index {std::move(index_manager.get_index(index_id))};
   
-  for (const auto& [record, response] : t_pg) {
-    if (response != PageResponse::Success)
-      co_return response;
+  for (auto rec_id : co_await index.get_matches(equality_key)) {
+    RecordPageHandler rec_page {std::move(co_await get_page(rec_id.page_num))};
+    auto rec_resp = rec_page.read_record(rec_id.slot_num);
+    if (rec_resp.status != PageResponse::Success)
+      continue;
 
-    if (apply_clause(record, sql_stmt.where_tree))
-      records.push_back(record);
-  }
-  */
-  co_return PageResponse::Success;
-}
-
-/********************************************************************************/
-
-void Table::set_attribute(Record& record, 
-                          const std::string& attr,
-                          const std::string& attr_value) 
-{
-  size_t attr_idx  = get_attr_idx(attr);
-  record[attr_idx] = cast_to(attr_value, meta_data.get_record_layout()[attr_idx]); 
-}
-
-/********************************************************************************/
-
-bool Table::same_primary_key(const Record& table_record, 
-                             const Record& potential_insert)
-{
-  int32_t num_equal = 0;
-
-  for (const auto& key_attr : meta_data.get_primary_key()) {
-    size_t attr_idx = get_attr_idx(key_attr);
-    if (table_record[attr_idx] == potential_insert[attr_idx])
-      ++num_equal;
+    if (apply_clause(sql_stmt.where_tree, rec_resp.record))
+      matches.push_back(rec_id);
   }
 
-  return num_equal == meta_data.get_num_primary();
+  co_return matches;
 }
 
 /********************************************************************************/
 
-RecordData Table::cast_to(const std::string&  attr_value, 
-                          const DatabaseType& db_type) 
-{
-  switch (db_type.type) {
-    case Type::String : return attr_value; break;
-    case Type::Integer: return std::stoi(attr_value); break;
-    case Type::Float  : return std::stof(attr_value); break;
-    default: throw std::runtime_error("Error: Invalid DataType cannot cast");
+Task<RecId> Table::push_back_record(Record& record) {
+  RecordPageHandler rec_page {std::move(co_await get_page(meta_data.get_num_pages()))};
+  RecId status = rec_page.add_record(record);
+
+  if (status == PAGE_FILLED) {
+    rec_page = std::move(co_await create_page());
+    status   = rec_page.add_record(record);
   }
+   
+  assert(status != PAGE_FILLED);
+  co_return status;
 }
 
 /********************************************************************************/
 
-size_t Table::get_attr_idx(const std::string& attr) {
-  auto itr = std::find(std::begin(meta_data.get_attr_lst()),
-                       std::end(meta_data.get_attr_lst()), attr);
-  
-  if (itr == std::end(meta_data.get_attr_lst())) 
-    throw std::runtime_error("Error: Attribute does not exist in record");
-
-  return std::distance(std::begin(meta_data.get_attr_lst()), itr);
-}
-
-/********************************************************************************/
-
-bool Table::apply_clause(const Record&  record,
-                         const ASTTree& clause,
-                         size_t layer)
+bool Table::apply_clause(const ASTTree& clause,
+                         const Record&  record,
+                         size_t         layer) const 
 {
   if (!clause[layer].comp && !clause[layer].conj) 
     return true;
 
   if (clause[layer].comp) {
-    size_t     attr_idx  = get_attr_idx(clause[layer].lhs);
     RecordData comp_data = cast_to(clause[layer].rhs, 
-                                   meta_data.get_record_layout()[attr_idx]);
+                                   meta_data.get_type_of(clause[layer].rhs));
     
-    return clause[layer].comp(record[attr_idx], 
+    return clause[layer].comp(record[meta_data.get_attr_idx(clause[layer].lhs)], 
                               comp_data);
   } else
-    return clause[layer].conj(apply_clause(record, clause, right(layer)),
-                              apply_clause(record, clause, left(layer)));
+    return clause[layer].conj(apply_clause(clause, record, right(layer)),
+                              apply_clause(clause, record, left(layer)));
+}
+
+/********************************************************************************/
+
+std::pair<std::vector<std::string>, Record> Table::get_equality_attr(const SQLStatement& sql_stmt) {
+  std::vector<std::string> equality_attrs;
+  Record                   equality_val_key;
+
+  const ASTTree& where_tree = sql_stmt.where_tree;
+  for (int32_t node = 0; node < MAX_PARAMS; ++node) {
+    if (where_tree[node].comp.target_type() == typeid(std::equal_to<RecordData>)) 
+    {
+      equality_attrs.push_back(where_tree[node].lhs);
+      auto record_data = cast_to(where_tree[node].rhs, 
+                                 meta_data.get_type_of(where_tree[node].lhs));
+    }
+  }
+  
+  return {equality_attrs, equality_val_key};
 }
 
 /********************************************************************************/
 
 Task<RecordPageHandler> Table::get_page(const int32_t page_num) {
-  assert(page_num > meta_data.get_num_pages());
-
+  assert(page_num < meta_data.get_num_pages());
   Handler* handler = co_await disk_manager.read_page(table_pages_fd.fd,
                                                      page_num,
                                                      meta_data.get_record_layout());
+  co_return RecordPageHandler{handler};
+}
+
+/********************************************************************************/
+
+Task<RecordPageHandler> Table::create_page() {
+  meta_data.increase_num_pages();
+  Handler* handler = co_await disk_manager.create_page(table_pages_fd.fd,
+                                                       meta_data.get_num_pages(),
+                                                       meta_data.get_record_layout());
   co_return RecordPageHandler{handler};
 }

@@ -4,12 +4,13 @@
 #include "Iouring.hpp"
 #include <stdexcept>
 
-BTree::BTree(IndexMetaData&  index_meta_data,
-             FileDescriptor& index_pages_filedescriptor)
-  : disk_manager  {DiskManager::get_instance()},
-    meta_data     {index_meta_data},
-    index_pages_fd{index_pages_filedescriptor}
-{}
+BTree::BTree(IndexMetaData  index_meta_data,
+             FileDescriptor index_pages_filedescriptor)
+  : undefined_btree {false},
+    disk_manager_ptr{&DiskManager::get_instance()},
+    meta_data       {index_meta_data},
+    index_pages_fd  {std::move(index_pages_filedescriptor)}
+{};
   
 /********************************************************************************/
 
@@ -90,7 +91,7 @@ Task<void> BTree::insert_entry(const Record key,
 /********************************************************************************/
 
 Task<void> BTree::delete_entry(const Record key, 
-                               const RecId rec_id)
+                               const RecId  rec_id)
 {
   const int32_t min_num_children = (meta_data.get_order() + 1) / 2;
 
@@ -244,6 +245,31 @@ Task<void> BTree::delete_entry(const Record key,
 }
 
 /********************************************************************************/
+/* gets all values which matches with a given record value, return tables and rec_id 
+   of the value that match (sorted by table) */
+Task<std::vector<RecId>> BTree::get_matches(const Record key) {
+  std::vector<RecId> matches;
+
+  const IndexId lb = co_await lower_bound(key);
+  const IndexId ub = co_await upper_bound(key);
+
+  for (LeafItr leaf_itr{this, lb, ub}; !leaf_itr.is_end(); co_await leaf_itr.next()) {
+    const IndexId itr_index = leaf_itr.get_index_id();
+    IndexPageHandler node   = co_await get_node(itr_index.page_num);
+    assert(node.get_is_leaf());
+
+    const RecId rec_id = co_await leaf_itr.get_rid();
+    matches.push_back(rec_id);
+  }
+
+  std::sort(std::begin(matches), std::end(matches), [](const RecId& a, const RecId& b) { 
+    return a.page_num < b.page_num; 
+  });
+
+  co_return matches;
+}
+
+/********************************************************************************/
 
 Task<RecId> BTree::get_rid(const IndexId index_id) {
   IndexPageHandler  node = co_await get_node(index_id.page_num);
@@ -308,9 +334,9 @@ IndexId BTree::leaf_begin() {
 Task<IndexPageHandler> BTree::get_node(const int32_t page_num) {
   assert(page_num < meta_data.get_num_pages());
 
-  Handler* handler = co_await disk_manager.read_page(index_pages_fd.fd,
-                                                     page_num,
-                                                     meta_data.get_key_layout());
+  Handler* handler = co_await disk_manager_ptr->read_page(index_pages_fd.fd,
+                                                          page_num,
+                                                          meta_data.get_key_layout());
   co_return IndexPageHandler{handler, &meta_data};
 }
 
@@ -321,9 +347,9 @@ Task<IndexPageHandler> BTree::create_node() {
 
   if (meta_data.get_first_free_page() == NO_FREE_PAGE) {
     /* no free pages create a new one, call disk manager */
-    handler = co_await disk_manager.create_page(index_pages_fd.fd, 
-                                                meta_data.get_num_pages(),
-                                                meta_data.get_key_layout());
+    handler = co_await disk_manager_ptr->create_page(index_pages_fd.fd, 
+                                                     meta_data.get_num_pages(),
+                                                     meta_data.get_key_layout());
     meta_data.increase_num_pages();
     co_return IndexPageHandler{handler, &meta_data};
   } else {

@@ -81,11 +81,11 @@ void Parser::parse_query(const std::string& user_query) {
     exit(1);
   }
 
+  reset_parser();
   sv_query = query;
   command  = get_command(sv_query);
   statement.command = command;
 
-  reset_parser();
   while (!sv_query.empty()) {
     if (command == Command::Create||
         command == Command::CreateIndex||

@@ -1,25 +1,27 @@
 #include "RecordPageHandler.hpp"
 
 RecordPageHandler::RecordPageHandler(Handler* handler) 
-  : rw_mutex_ptr{std::make_unique<std::shared_mutex>()}
+  : rw_mutex_ptr       {std::make_unique<std::shared_mutex>()},
+    is_undefined_rec_pg{false}
 {
   assert(handler);
-  handler_ptr = handler; 
-  timestamp   = handler_ptr->page_timestamp;
+  handler_ptr = handler;
   record_size = calc_record_size(handler_ptr->page_layout); 
-
+  handler_ptr->is_pinned = true;
+  
   if (handler_ptr->page_type == PageType::NonPersistent) {
     num_records = 0;
-    page_cursor = HEADER_SIZE;
+    page_cursor = REC_HEADER_SIZE;
   } else {
     num_records = read_header();
-    page_cursor = HEADER_SIZE + record_size * num_records;
+    page_cursor = REC_HEADER_SIZE + record_size * num_records;
   }
 } 
 
 /********************************************************************************/
 
 RecordPageHandler::~RecordPageHandler() {
+  handler_ptr->is_pinned = false;
   if (handler_ptr->is_dirty) {
     compact_page();
     update_num_records();
@@ -28,61 +30,44 @@ RecordPageHandler::~RecordPageHandler() {
 
 /********************************************************************************/
 
-PageResponse RecordPageHandler::add_record(Record& record) 
-{
-  if (!handler_ptr->is_valid_timestamp(timestamp))
-    return PageResponse::InvalidTimestamp;
-
+RecId RecordPageHandler::add_record(Record& record) {
   std::unique_lock lock{*rw_mutex_ptr};
-  PinGuard         pin_guard{handler_ptr->is_pinned, 
-                             handler_ptr->page_usage};
 
   if (tombstones.empty() && is_full())
-    return PageResponse::PageFull;
+    return PAGE_FILLED;
 
   handler_ptr->is_dirty = true;
   if (!tombstones.empty()) {
+    int32_t tomb_idx = *tombstones.rbegin(); 
     update_record(*tombstones.rbegin(), record);
     tombstones.erase(--std::end(tombstones));
-    return PageResponse::Success;
+    return {handler_ptr->page_num, tomb_idx};
   }
 
   handler_ptr->set_record(page_cursor, handler_ptr->page_layout, 
                           record);
-  
-  ++num_records;
-  return PageResponse::Success;
+
+  return {handler_ptr->page_num, num_records++};
 }
 
 /********************************************************************************/
 
-PageResponse RecordPageHandler::delete_record(const uint32_t record_num) 
-{
+RecId RecordPageHandler::delete_record(const int32_t record_num) {
   assert(record_num < num_records && record_num >= 0);
-  if (!handler_ptr->is_valid_timestamp(timestamp))
-    return PageResponse::InvalidTimestamp;
-
   std::unique_lock lock{*rw_mutex_ptr};
-  PinGuard         pin_guard{handler_ptr->is_pinned, 
-                             handler_ptr->page_usage};
   
   handler_ptr->is_dirty = true;
   tombstones.insert(record_num);
-  return PageResponse::Success;
+  return {handler_ptr->page_num, record_num};
 }
 
 /********************************************************************************/
 
-PageResponse RecordPageHandler::update_record(const uint32_t record_num,
+PageResponse RecordPageHandler::update_record(const  int32_t record_num,
                                               Record&        new_record)
 {
   assert(record_num < num_records && record_num >= 0);
-  if (!handler_ptr->is_valid_timestamp(timestamp))
-    return PageResponse::InvalidTimestamp;
-  
   std::unique_lock lock{*rw_mutex_ptr};
-  PinGuard         pin_guard{handler_ptr->is_pinned, 
-                             handler_ptr->page_usage};
   
   if (tombstones.count(record_num))
     return PageResponse::DeletedRecord;
@@ -101,18 +86,13 @@ PageResponse RecordPageHandler::update_record(const uint32_t record_num,
 /********************************************************************************/
 
 /* zero based indexing for record_num, ie: first record is record_num = 0 */
-RecordResponse RecordPageHandler::read_record(const uint32_t record_num,
-                                              const LockOpt  l_opt) 
+RecordResponse RecordPageHandler::read_record(const int32_t record_num,
+                                              const LockOpt l_opt) 
 {
   assert(record_num < num_records && record_num >= 0);
   Record ret_record;
   
-  if (!handler_ptr->is_valid_timestamp(timestamp))
-    return {std::move(ret_record), PageResponse::InvalidTimestamp};
- 
   if (l_opt == LockOpt::Lock) std::shared_lock lock{*rw_mutex_ptr};
-  PinGuard pin_guard{handler_ptr->is_pinned, 
-                     handler_ptr->page_usage};
   
   if (tombstones.count(record_num)) 
     return {std::move(ret_record), PageResponse::DeletedRecord};

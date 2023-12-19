@@ -11,23 +11,27 @@
 #include <span>
 #include <vector>
 
+#include "IoProcessor.hpp"
 #include "Iouring.hpp"
-#include "IoScheduler.hpp"
 #include "Task.hpp"
 
 /********************************************************************************/
 
-struct IoAwaitable { 
+struct IoAwaitable {
+ /* this constructor is used for reads, where fd is the 
+    file we are reading from and offset is the offset into
+    the file */
   IoAwaitable(const int32_t fd,
               const off_t   offset,
 	      const IOP     iop) 
   { 
-    sqe_data.fd	 = fd; 
-    sqe_data.iop = iop;
+    sqe_data.fd	    = fd; 
+    sqe_data.iop    = iop;
     sqe_data.offset = offset;
   }
 
-
+  /* this constructor is used for writes, where page_data 
+     is the data we want to write to the given fd */
   IoAwaitable(const int32_t fd,
               const off_t   offset,
 	      const IOP     iop, 
@@ -38,12 +42,13 @@ struct IoAwaitable {
   }
 
   /* pause the coroutine we are in right away */
-  bool await_ready() const { return false; }
+  bool await_ready() const 
+  { return false; }
   
-  /* give SqeData a handle to the coroutine we have paused, we will
-     resume the function when we handle the I/O request */
+  /* give SqeData a handle to the coroutine we have passed, we will
+     resume the coroutine when we handle the IO request */
   void await_suspend(std::coroutine_handle<> coroutine) {
-    Iouring& io_uring = Iouring::get_instance();
+    Iouring& io_uring  = Iouring::get_instance();
     sqe_data.coroutine = coroutine;
 
     if (sqe_data.iop == IOP::Read)
@@ -109,15 +114,15 @@ struct PageBundle : BaseBundle {
   }
   
   int32_t get_min_page_usage() override {
-    int32_t min_usage = INT32_MIN;
-    int32_t page_id   = -1;
+    int32_t min_ref = INT32_MIN;
+    int32_t page_id = -1;
 
     for (size_t i = 0 ; i < N; ++i)
       if (!page_handlers[i].is_pinned && 
-          page_handlers[i].page_usage < min_usage) 
+          page_handlers[i].page_ref < min_ref) 
       {
-	min_usage = page_handlers[i].page_usage;
-	page_id   = i;
+	min_ref = page_handlers[i].page_ref;
+	page_id = i;
       }
   
     return page_id;
@@ -145,11 +150,11 @@ struct DiskManager {
     return instance;
   }
 
-  [[nodiscard]] Task<Handler*> create_page(const int32_t fd,
-                                           const int32_t page_num,
+  [[nodiscard]] Task<Handler*> create_page(const int32_t      fd,
+                                           const int32_t      page_num,
                                            const RecordLayout layout);
-  [[nodiscard]] Task<Handler*> read_page  (const int32_t fd,
-                                           const int32_t page_num,
+  [[nodiscard]] Task<Handler*> read_page  (const int32_t      fd,
+                                           const int32_t      page_num,
                                            const RecordLayout layout);
 
 private:
@@ -165,8 +170,14 @@ private:
                                   const PageType page_type);
 
   DiskManager();
-  int32_t                            timestamp_gen;
-  IoScheduler			     io_scheduler;
+  /* timstamp generator generates a timestamp associated with the page, 
+     a user of the page can determine if their page has been reclaimed 
+     by checking their timestamp */
+  int32_t     timestamp_gen;
+  IoProcessor io_processor;
+
+  /* io bundles are used only for IO as they are registered 
+     with io-uring */
   PageBundle<BUFF_RING_SIZE>	     io_bundles;
   PageBundle<PAGE_POOL_SIZE>	     np_bundles;
   std::unique_ptr<io_uring_buf_ring> buff_ring_ptr; 

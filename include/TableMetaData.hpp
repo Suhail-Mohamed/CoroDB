@@ -45,7 +45,7 @@ struct TableMetaData {
 
   const int32_t get_num_attr() const 
   { return num_attr; }
-  
+
   const int32_t get_num_foreign() const 
   { return num_foreign; }
 
@@ -58,7 +58,7 @@ struct TableMetaData {
   const RecordLayout& get_record_layout() const
   { return record_layout; }
 
-  const std::vector<std::string>& get_primary_key() const 
+  std::vector<std::string>& get_primary_key() 
   { return primary_key; }
 
   const std::vector<std::string>& get_attr_lst() const 
@@ -69,6 +69,21 @@ struct TableMetaData {
 
   void increase_num_pages() { ++num_pages; }
   void decrease_num_pages() { --num_pages; }
+  
+  size_t get_attr_idx(const std::string& attr) const {
+    auto itr = std::find(std::begin(attr_list), 
+                         std::end(attr_list), attr);
+  
+    if (itr == std::end(attr_list)) 
+      throw std::runtime_error("Error: Attribute does not exist in record");
+
+    return std::distance(std::begin(attr_list), itr);
+  }
+
+  DatabaseType get_type_of(const std::string attr) const {
+    size_t attr_idx = get_attr_idx(attr);
+    return record_layout[attr_idx];
+  }
 
 private:
   void write_meta_data() {

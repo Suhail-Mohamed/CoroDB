@@ -6,26 +6,6 @@
 #include "Iouring.hpp"
 #include "Util.hpp"
 
-struct RecId {
-  RecId() 
-    : page_num{-1}, 
-      slot_num{-1} {};
-  
-  RecId(int32_t pg_number, int32_t slot_number)
-    : page_num{pg_number}, 
-      slot_num{slot_number} {};
-
-  bool operator==(const RecId& other) const {
-    return other.page_num == page_num && 
-           other.slot_num == slot_num;
-  }
-
-  bool operator!=(const RecId& other) const 
-  { return !(*this == other); }
-
-  int32_t page_num;
-  int32_t slot_num;
-};
 
 /********************************************************************************/
 
@@ -46,6 +26,16 @@ struct IndexPageHdr {
       next_leaf   {NO_NEXT_LEAF},
       is_leaf     {false}
   {};
+  
+  IndexPageHdr(Handler* init_page)
+    : parent      {NO_PARENT},
+      next_free   {NO_FREE_PAGE},
+      num_keys    {NO_KEYS},
+      num_children{NO_KIDS},
+      prev_leaf   {NO_PREV_LEAF},
+      next_leaf   {NO_NEXT_LEAF},
+      is_leaf     {false}
+  { write_header(init_page->page_ptr); };
 
   IndexPageHdr(int32_t parent_page,
                int32_t next_free_page,  
@@ -124,32 +114,48 @@ struct IndexPageHdr {
 
 /********************************************************************************/
 
-constexpr int32_t EMPTY_INDEX  = -1;
+constexpr int32_t TREE_ORDER  = PAGE_SIZE; 
+constexpr int32_t EMPTY_INDEX = -1;
 
 struct IndexMetaData {
-  IndexMetaData(const std::string data_file) : 
-    meta_data_file{data_file} 
-  { read_meta_data(); };
+  IndexMetaData()
+    : num_pages     {EMPTY_INDEX},
+      root_page     {EMPTY_INDEX},
+      first_free_pg {NO_FREE_PAGE},
+      first_leaf    {EMPTY_INDEX},
+      last_leaf     {EMPTY_INDEX},
+      key_size      {calc_record_size(key_layout)}
+  {};
 
-  IndexMetaData(int32_t tree_order, 
-                RecordLayout key) 
-    : btree_order  {tree_order},
-      num_pages    {EMPTY_INDEX},
-      root_page    {EMPTY_INDEX},
-      first_free_pg{NO_FREE_PAGE},
-      first_leaf   {EMPTY_INDEX},
-      last_leaf    {EMPTY_INDEX},
-      key_layout   {key},
-      key_size     {calc_record_size(key_layout)}
+  IndexMetaData(RecordLayout key,
+                const std::string data_file) 
+    : IndexMetaData{} 
   {
-    max_num_keys = (PAGE_SIZE - sizeof(IndexPageHdr)) / (key_size + sizeof(RecId));
-    assert(max_num_keys >= btree_order);
+    key_layout     = key;
+    meta_data_file = data_file;
+
+    btree_order = (PAGE_SIZE - sizeof(IndexPageHdr)) / (key_size + sizeof(RecId));
+    assert(btree_order > 2);
 
     num_key_attr = key_layout.size();
     key_offset   = sizeof(IndexPageHdr);
-    rid_offset   = key_offset + key_size * max_num_keys;
+    rid_offset   = key_offset + key_size * btree_order;
+    write_meta_data();
   };
 
+  IndexMetaData(RecordLayout key,
+                const std::filesystem::path path)
+    : IndexMetaData{key, path.string()}
+  {};
+
+  IndexMetaData(const std::string data_file)
+    : meta_data_file{data_file} 
+  { read_meta_data(); };
+
+  IndexMetaData(const std::filesystem::path data_file)
+    : meta_data_file{data_file.string()} 
+  { read_meta_data(); };
+  
   const int32_t get_order() const 
   { return btree_order; }
   
@@ -170,9 +176,6 @@ struct IndexMetaData {
 
   const int32_t get_key_size() const
   { return key_size; }
-
-  const int32_t get_max_num_keys() const 
-  { return max_num_keys; }
 
   const int32_t get_num_key_attr() const
   { return num_key_attr; }
@@ -210,7 +213,6 @@ private:
     out.file_write(&last_leaf    , sizeof(last_leaf));
     out.file_write(&key_size     , sizeof(key_size));
     out.file_write(&num_key_attr , sizeof(num_key_attr));
-    out.file_write(&max_num_keys , sizeof(max_num_keys));
     out.file_write(&key_offset   , sizeof(key_offset));
     out.file_write(&rid_offset   , sizeof(rid_offset));
 
@@ -229,7 +231,6 @@ private:
     in.file_read(&last_leaf    , sizeof(last_leaf));
     in.file_read(&key_size     , sizeof(key_size));
     in.file_read(&num_key_attr , sizeof(num_key_attr));
-    in.file_read(&max_num_keys , sizeof(max_num_keys));
     in.file_read(&key_offset   , sizeof(key_offset));
     in.file_read(&rid_offset   , sizeof(rid_offset));
 
@@ -248,7 +249,6 @@ private:
   int32_t last_leaf;
   int32_t key_size;
   int32_t num_key_attr;
-  int32_t max_num_keys;
   int32_t key_offset;
   int32_t rid_offset;
 
