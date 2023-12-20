@@ -1,0 +1,10 @@
+To run project you must have:
+ - Linux Kernel >= 5.19 
+ - liburing >= 2.3
+ - GCC >= 13 or Clang >= 14
+
+The first two are Iouring requirements the gcc/clang version is so then coroutines work
+
+To build:
+ - run: cmake -DCMAKE_BUILD_TYPE=Release ..
+ - run: ./CoroDB for the command line to start

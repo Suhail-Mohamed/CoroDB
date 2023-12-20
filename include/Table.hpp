@@ -36,8 +36,8 @@ private:
   Task<std::vector<RecId>> search_table(const SQLStatement& sql_stmt);
   Task<std::vector<RecId>> find_matches(const SQLStatement& sql_stmt);
   Task<std::vector<RecId>> find_matches(const SQLStatement& sql_stmt, 
-                                        const Record& equality_key,
-                                        int32_t       index_id);
+                                        const Record&       equality_key,
+                                        const int32_t       index_id);
 
   Task<RecId> push_back_record(Record& record);
   bool        apply_clause(const ASTTree& clause,

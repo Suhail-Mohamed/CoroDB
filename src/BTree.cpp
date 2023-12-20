@@ -18,7 +18,7 @@ Task<void> BTree::insert_entry(const Record key,
                                const RecId rec_id)
 {
   IndexId          index_id = co_await upper_bound(key);
-  IndexPageHandler node     = co_await get_node(index_id.page_num);
+  IndexPageHandler node {co_await get_node(index_id.page_num)};
 
   node.insert_key(key   , index_id.idx);
   node.insert_rid(rec_id, index_id.idx);
@@ -31,7 +31,7 @@ Task<void> BTree::insert_entry(const Record key,
   while (node.get_num_children() > meta_data.get_order()) {
     /* case when root node is overfilled */
     if (node.page_hdr.parent == NO_PARENT) {
-      IndexPageHandler new_root = co_await create_node();
+      IndexPageHandler new_root {co_await create_node()};
       new_root.set_page_header(IndexPageHdr{});
       
       new_root.insert_rid({node.get_page_num(), -1}, 0);
@@ -55,7 +55,7 @@ Task<void> BTree::insert_entry(const Record key,
       sibling.set_prev_leaf(node.get_page_num());
       node.set_next_leaf(sibling.get_page_num());
 
-      IndexPageHandler node_nxt = co_await get_node(node.get_next_leaf());
+      IndexPageHandler node_nxt {co_await get_node(node.get_next_leaf())};
       node_nxt.set_prev_leaf(sibling.get_page_num());
     }
 
@@ -74,7 +74,7 @@ Task<void> BTree::insert_entry(const Record key,
       co_await maintain_child(sibling, child_idx);
 
     /* update parent as child has split */
-    IndexPageHandler parent = co_await get_node(node.get_parent());
+    IndexPageHandler parent {co_await get_node(node.get_parent())};
     int32_t child_idx = parent.find_child(node.get_page_num());
     
     parent.insert_key(node.get_max_key(), child_idx);
@@ -100,7 +100,7 @@ Task<void> BTree::delete_entry(const Record key,
 
   for (LeafItr leaf_itr{this, lb, ub}; !leaf_itr.is_end(); co_await leaf_itr.next()) {
     const IndexId itr_index = leaf_itr.get_index_id();
-    IndexPageHandler node   = co_await get_node(itr_index.page_num);
+    IndexPageHandler node {co_await get_node(itr_index.page_num)};
     assert(node.get_is_leaf());
 
     const RecId entry_rec_id = co_await leaf_itr.get_rid();
@@ -119,8 +119,8 @@ Task<void> BTree::delete_entry(const Record key,
         if (!node.get_is_leaf() && node.get_num_keys() <= 1) {
           const RecId only_child = node.get_rid(0);
           
-          IndexPageHandler child_page = 
-            co_await get_node(only_child.page_num);
+          IndexPageHandler child_page  
+           {co_await get_node(only_child.page_num)};
           
           child_page.set_parent(NO_PARENT);
           meta_data.set_root_page(only_child.page_num);
@@ -129,7 +129,7 @@ Task<void> BTree::delete_entry(const Record key,
         break;
       }
 
-      IndexPageHandler parent    = co_await get_node(node.get_parent());
+      IndexPageHandler parent {co_await get_node(node.get_parent())};
       const int32_t    child_idx = parent.find_child(node.get_page_num());  
 
       /* start getting siblings to lend you some children */
@@ -137,8 +137,8 @@ Task<void> BTree::delete_entry(const Record key,
       if (child_idx > 0) {
         const RecId sibling_rid = parent.get_rid(child_idx - 1);
         
-        IndexPageHandler left_sibling = 
-          co_await get_node(sibling_rid.page_num);
+        IndexPageHandler left_sibling 
+         {co_await get_node(sibling_rid.page_num)};
 
         /* if left sibling has some children borrow one from them */
         if (left_sibling.get_num_children() > min_num_children) {
@@ -160,8 +160,8 @@ Task<void> BTree::delete_entry(const Record key,
       if (child_idx + 1 < parent.get_num_children()) {
         const RecId sibling_rid = parent.get_rid(child_idx + 1);
 
-        IndexPageHandler right_sibling = 
-          co_await get_node(sibling_rid.page_num);
+        IndexPageHandler right_sibling 
+         {co_await get_node(sibling_rid.page_num)};
         
         /* if right sibling has some children borrow one from them */
         if (right_sibling.get_num_children() > min_num_children) {
@@ -183,8 +183,8 @@ Task<void> BTree::delete_entry(const Record key,
       if (child_idx > 0) {
         /* merge with left sibling, give them all your children */
         const RecId sibling_rid = parent.get_rid(child_idx - 1);
-        IndexPageHandler left_sibling = 
-          co_await get_node(sibling_rid.page_num);
+        IndexPageHandler left_sibling 
+         {co_await get_node(sibling_rid.page_num)};
         
         left_sibling.push_back_keys(node.get_keys(0, node.get_num_keys()));
         left_sibling.push_back_rids(node.get_rids(0, node.get_num_children()));
@@ -209,8 +209,8 @@ Task<void> BTree::delete_entry(const Record key,
         /* merge with right sibling, right sibling gives you all their children */
         assert(child_idx + 1 < parent.get_num_children());
         const RecId sibling_rid = parent.get_rid(child_idx + 1);
-        IndexPageHandler right_sibling = 
-          co_await get_node(sibling_rid.page_num);
+        IndexPageHandler right_sibling 
+          {co_await get_node(sibling_rid.page_num)};
         
         node.push_back_keys(
             right_sibling.get_keys(0, right_sibling.get_num_keys()));
@@ -255,7 +255,7 @@ Task<std::vector<RecId>> BTree::get_matches(const Record key) {
 
   for (LeafItr leaf_itr{this, lb, ub}; !leaf_itr.is_end(); co_await leaf_itr.next()) {
     const IndexId itr_index = leaf_itr.get_index_id();
-    IndexPageHandler node   = co_await get_node(itr_index.page_num);
+    IndexPageHandler node {co_await get_node(itr_index.page_num)};
     assert(node.get_is_leaf());
 
     const RecId rec_id = co_await leaf_itr.get_rid();
@@ -272,7 +272,7 @@ Task<std::vector<RecId>> BTree::get_matches(const Record key) {
 /********************************************************************************/
 
 Task<RecId> BTree::get_rid(const IndexId index_id) {
-  IndexPageHandler  node = co_await get_node(index_id.page_num);
+  IndexPageHandler  node {co_await get_node(index_id.page_num)};
   const RecId       rid  = node.get_rid(index_id.idx);
   
   co_return rid;
@@ -281,7 +281,7 @@ Task<RecId> BTree::get_rid(const IndexId index_id) {
 /********************************************************************************/
 
 Task<IndexId> BTree::lower_bound(const Record key) {
-  IndexPageHandler node = co_await get_node(meta_data.get_root_page());
+  IndexPageHandler node {co_await get_node(meta_data.get_root_page())};
 
   while (!node.page_hdr.is_leaf) {
     const int32_t key_idx = node.lower_bound(key);
@@ -300,7 +300,7 @@ Task<IndexId> BTree::lower_bound(const Record key) {
 /********************************************************************************/
 
 Task<IndexId> BTree::upper_bound(const Record key) {
-  IndexPageHandler node = co_await get_node(meta_data.get_root_page());
+  IndexPageHandler node {co_await get_node(meta_data.get_root_page())};
 
   while (!node.page_hdr.is_leaf) {
     const int32_t key_idx = node.upper_bound(key);
@@ -319,7 +319,7 @@ Task<IndexId> BTree::upper_bound(const Record key) {
 /********************************************************************************/
 
 Task<IndexId> BTree::leaf_end() {
-  IndexPageHandler node = co_await get_node(meta_data.get_last_leaf());
+  IndexPageHandler node {co_await get_node(meta_data.get_last_leaf())};
   co_return IndexId{meta_data.get_last_leaf(), node.get_num_children()};
 }
 
@@ -354,7 +354,7 @@ Task<IndexPageHandler> BTree::create_node() {
     co_return IndexPageHandler{handler, &meta_data};
   } else {
     /* we have a page in our index file we can reuse */
-    IndexPageHandler node = co_await get_node(meta_data.get_first_free_page());
+    IndexPageHandler node {co_await get_node(meta_data.get_first_free_page())};
     meta_data.set_first_free_page(node.get_next_free());
     node.handler_ptr->is_dirty = true;
     co_return node;
@@ -367,13 +367,13 @@ Task<IndexPageHandler> BTree::create_node() {
    the maximum key value of its child nodes. In a B-tree, parent nodes store the largest key values
    of their children to guide the search process efficiently. */
 Task<void> BTree::maintain_parent(const IndexPageHandler& node) { 
-  IndexPageHandler child = node;
+  IndexPageHandler child {node};
 
   while (child.get_parent() != NO_PARENT) {
-    IndexPageHandler parent    = co_await get_node(child.get_parent());
+    IndexPageHandler parent {co_await get_node(child.get_parent())};
 
-    const int32_t    child_idx = parent.find_child(child.get_page_num());
-    const Record     child_key = parent.get_key(child_idx);
+    const int32_t child_idx = parent.find_child(child.get_page_num());
+    const Record  child_key {parent.get_key(child_idx)};
 
     /* all nodes above this point are properly setup */
     if (child_key == child.get_max_key()) break;
@@ -395,7 +395,7 @@ Task<void> BTree::maintain_child(IndexPageHandler& new_parent,
   const RecId rid_resp = new_parent.get_rid(child_idx);
 
   const int32_t child_page_num = rid_resp.page_num;
-  IndexPageHandler child = co_await get_node(child_page_num);
+  IndexPageHandler child {co_await get_node(child_page_num)};
   child.set_parent(new_parent.get_page_num());
 }
 
@@ -406,11 +406,11 @@ Task<void> BTree::maintain_child(IndexPageHandler& new_parent,
 Task<void> BTree::erase_leaf(IndexPageHandler& leaf) {
   assert(leaf.get_is_leaf());
 
-  IndexPageHandler prev      = co_await get_node(leaf.get_prev_leaf());
+  IndexPageHandler prev {co_await get_node(leaf.get_prev_leaf())};
   prev.handler_ptr->is_dirty = true;
   prev.set_next_leaf(leaf.get_next_leaf());
 
-  IndexPageHandler next = co_await get_node(leaf.get_next_leaf());
+  IndexPageHandler next {co_await get_node(leaf.get_next_leaf())};
   next.set_prev_leaf(leaf.get_prev_leaf());
 }
 

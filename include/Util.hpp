@@ -153,8 +153,6 @@ const std::unordered_map<TypeOfJoin, std::string> swap_join_map {
 
 /********************************************************************************/
 
-/* We only keep 1 parser running in the program so we allocate all the data 
-   we need upfront */
 using AttrList    = std::array<std::string , MAX_PARAMS>;
 using ASTTree     = std::array<ASTNode     , MAX_PARAMS>;
 using ForeignData = std::array<std::string , MAX_FOREIGN>; 
@@ -183,7 +181,7 @@ struct SQLStatement {
   AttrList    set_value;
   ASTTree     where_tree;
 
-  friend std::ostream& operator<<(std::ostream&	os, 
+  friend std::ostream& operator<<(std::ostream&	      os, 
                                   const SQLStatement& stmt) 
   {
     os << "	Command        : " << swap_command_map.at(stmt.command) << "\n";

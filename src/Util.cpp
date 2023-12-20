@@ -75,6 +75,3 @@ void print_ast(const std::array<ASTNode, MAX_PARAMS>& ast,
 
   print_ast(ast, right(layer), num_spaces + 1); 
 }
-
-
-

@@ -89,7 +89,7 @@ private:
 
     Task<void> next() {
       assert(!is_end());
-      IndexPageHandler node = co_await btree->get_node(itr.page_num);
+      IndexPageHandler node {co_await btree->get_node(itr.page_num)};
       
       assert(node.get_is_leaf());
       assert(itr.idx < node.get_num_keys());

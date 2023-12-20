@@ -37,11 +37,11 @@ Task<void> Table::execute_update(const SQLStatement& sql_stmt) {
   
   for (auto rec_id : matches) {
     RecordPageHandler rec_page {std::move(co_await get_page(rec_id.page_num))};
-    auto rec_resp = rec_page.read_record(rec_id.slot_num);
-    if (rec_resp.status != PageResponse::Success)
+    const auto [record, response] = rec_page.read_record(rec_id.slot_num);
+    if (response != PageResponse::Success)
       continue;
 
-    TableRecord table_record {rec_resp.record, &meta_data};
+    TableRecord table_record {record, &meta_data};
     for (int32_t attr = 0; attr < sql_stmt.num_set; ++attr)
       table_record.set_attribute(sql_stmt.set_attr[attr], 
                                  sql_stmt.set_value[attr]);
@@ -60,8 +60,8 @@ Task<void> Table::execute_insert(const SQLStatement& sql_stmt)
   TableRecord potential_insert{sql_stmt, &meta_data};
 
   /* we always have a index on the primary key of a table */
-  BTree prim_key_index {std::move(co_await index_manager.get_index(meta_data.get_primary_key()))};
-  Record key_poten_insert = potential_insert.get_subset(meta_data.get_primary_key()); 
+  BTree prim_key_index    {std::move(co_await index_manager.get_index(meta_data.get_primary_key()))};
+  Record key_poten_insert {potential_insert.get_subset(meta_data.get_primary_key())}; 
  
   assert(!prim_key_index.is_undefined());
   std::vector<RecId> matches {co_await prim_key_index.get_matches(key_poten_insert)};
@@ -80,11 +80,11 @@ Task<std::vector<TableRecord>> Table::execute_select_no_join(const SQLStatement&
 
   for (auto rec_id : matches) {
     RecordPageHandler rec_page {std::move(co_await get_page(rec_id.page_num))};
-    auto rec_resp = rec_page.read_record(rec_id.slot_num);
-    if (rec_resp.status != PageResponse::Success)
+    const auto [record, response] = rec_page.read_record(rec_id.slot_num);
+    if (response != PageResponse::Success)
       continue;
 
-    records.emplace_back(rec_resp.record, &meta_data);
+    records.emplace_back(record, &meta_data);
   }
 
   co_return records;
@@ -113,7 +113,7 @@ Task<std::vector<RecId>> Table::find_matches(const SQLStatement& sql_stmt) {
     RecordPageHandler rec_page {std::move(co_await get_page(page))};
 
     for (int32_t rec_num = 0; rec_num < rec_page.get_num_records(); ++rec_num) {
-      auto [record, response] = rec_page.read_record(rec_num);
+      const auto [record, response] = rec_page.read_record(rec_num);
       if (response != PageResponse::Success)
         continue;
 
@@ -131,18 +131,18 @@ Task<std::vector<RecId>> Table::find_matches(const SQLStatement& sql_stmt) {
    than linear search of table */
 Task<std::vector<RecId>> Table::find_matches(const SQLStatement& sql_stmt,
                                              const Record&       equality_key,
-                                             int32_t             index_id) 
+                                             const int32_t       index_id) 
 {
   std::vector<RecId> matches;
   BTree index {std::move(index_manager.get_index(index_id))};
   
   for (auto rec_id : co_await index.get_matches(equality_key)) {
     RecordPageHandler rec_page {std::move(co_await get_page(rec_id.page_num))};
-    auto rec_resp = rec_page.read_record(rec_id.slot_num);
-    if (rec_resp.status != PageResponse::Success)
+    const auto [record, response] = rec_page.read_record(rec_id.slot_num);
+    if (response != PageResponse::Success)
       continue;
 
-    if (apply_clause(sql_stmt.where_tree, rec_resp.record))
+    if (apply_clause(sql_stmt.where_tree, record))
       matches.push_back(rec_id);
   }
 
